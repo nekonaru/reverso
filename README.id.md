@@ -72,6 +72,16 @@ bwaan, dan paketnya dikirim dengan nol dependensi runtime.
 | **Inventaris arsip** | Daftar entri ZIP/APK/IPA/JAR dengan ukuran, metode kompresi, flag enkripsi, deteksi tipe dan penandaan entri mencurigakan |
 | **Sinyal packer** | Deteksi tanda tangan dan stub UPX, plus heuristik region entropy tinggi |
 
+### Inspector dan utilitas
+
+| Fitur | Deskripsi |
+| --- | --- |
+| **Triase direktori** | `reverso scan <dir>` triage rekursif seluruh file (format, entropy, SHA-256, sinyal packer) dengan rincian per format |
+| **Diff binary** | `reverso diff <a> <b>`: hash, entropy, ukuran, trait hardening (PIE, RELRO, canary, ASLR, CFG, ...), section, impor, ekspor dan kategori string |
+| **Pencarian byte hex** | `reverso find-bytes <file> <hex>`: pola `4d 5a ?? 60` dengan wildcard `??`, plus hex dump klasik lewat `reverso hex` |
+| **Inspector WebAssembly** | `reverso wasm <file>`: section, tipe, impor, ekspor, jumlah function/table/memory/global dan section name |
+| **Inspector DEX** | `reverso dex <file>`: jumlah di header, checksum, dan string table terkategori dari Android Dalvik Executable |
+
 ### Mirror website
 
 | Fitur | Deskripsi |
@@ -180,10 +190,16 @@ Gunakan `node dist/cli.js <perintah>` di mana pun kamu memakai `reverso <perinta
 ### Penggunaan sehari-hari
 
 - `reverso analyze ./target.bin` untuk laporan triase lengkap (tambahkan `--format md --out report.md` untuk Markdown)
+- `reverso scan ./samples --max-files 500` untuk triase seluruh direktori berisi file yang tidak dikenal
+- `reverso diff ./versi-lama.bin ./versi-baru.bin` untuk melihat persis apa yang berubah di antara dua build
+- `reverso find-bytes ./firmware.bin "7f 45 4c 46"` untuk mencari pola byte dengan wildcard
+- `reverso hex ./mystery.bin --offset 0 --length 256` untuk hex dump dengan offset
 - `reverso format ./mystery.bin` untuk mengidentifikasi berkas
 - `reverso layout ./target.elf` dan `reverso hardening ./win32.exe` untuk struktur dan proteksi binary
 - `reverso strings ./firmware.bin --min-length 6` untuk strings terkategori
 - `reverso js ./app.min.js` untuk inventaris endpoint dan secret di bundle web
+- `reverso dex ./classes.dex` untuk memeriksa string table Android DEX
+- `reverso wasm ./module.wasm` untuk memeriksa modul WebAssembly
 - `reverso site https://example.com --out ./mirror` untuk mirror website offline
 - `reverso capabilities` untuk daftar semua analyzer dan MCP tool
 
@@ -204,8 +220,9 @@ Tambahkan ke konfigurasi client kamu:
 ```
 
 Tool yang diekspos: `reverso_analyze`, `reverso_strings`, `reverso_entropy`,
-`reverso_format`, `reverso_layout`, `reverso_hardening`, `reverso_archive_list`
-dan `reverso_js_analyze`.
+`reverso_format`, `reverso_layout`, `reverso_hardening`, `reverso_archive_list`,
+`reverso_js_analyze`, `reverso_scan`, `reverso_diff`, `reverso_find_bytes`,
+`reverso_wasm`, `reverso_dex` dan `reverso_hex`.
 
 ---
 
@@ -276,7 +293,7 @@ node scripts/verify.mjs   # pipeline penuh (typecheck, coverage, build, audit)
 
 | Cek | Syarat |
 | --- | --- |
-| Unit dan integration test | Semua pass (84 test) |
+| Unit dan integration test | Semua pass (129 test) |
 | Line coverage | Minimal 70% |
 | Branch coverage | Minimal 60% |
 | Type check | `tsc --noEmit`, nol error |

@@ -18,10 +18,15 @@ import { mirrorSite } from "./web/mirror.js";
 import { runDoctor } from "./doctor.js";
 import { startStdioServer, TOOL_DEFINITIONS } from "./mcp/server.js";
 import { VERSION } from "./version.js";
+import { scanDirectory, scanReportToMarkdown } from "./inspect/scan.js";
+import { diffBuffers, diffReportToMarkdown } from "./inspect/diff.js";
+import { findPattern, hexDump } from "./inspect/bytes.js";
+import { parseWasm } from "./inspect/wasm.js";
+import { parseDex } from "./inspect/dex.js";
 
 export { VERSION };
 
-const ANALYZERS = ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js"] as const;
+const ANALYZERS = ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js", "scan", "diff", "find-bytes", "wasm", "dex", "hex"] as const;
 const COMMANDS = [...ANALYZERS, "site", "mcp", "doctor", "capabilities", "help", "version"] as const;
 
 const USAGE = `reverso ${VERSION}
@@ -31,6 +36,12 @@ Usage:
   reverso <command> [arguments] [options]
 
 Commands:
+  scan <dir>          Recursively triage every file in a directory
+  diff <a> <b>        Structural diff of two files
+  find-bytes <f> <hex> Search a file for a hex byte pattern (?? wildcard)
+  hex <file>          Hex dump of a file region (--offset, --length, --width)
+  wasm <file>         Inspect a WebAssembly module
+  dex <file>          Inspect an Android DEX file
   analyze <file...>   Full static analysis report
   layout <file>       ELF/PE/Mach-O structure (sections, imports, exports)
   hardening <file>    Hardening checks (PIE, NX, ASLR, RELRO, CFG, ...)
@@ -52,6 +63,17 @@ Options (analyze):
 
 Options (strings):
   --min-length <n>    Minimum string length (default: 4)
+
+Options (scan):
+  --max-files <n>     Stop after n analyzed files (default: 200, max 1000)
+
+Options (find-bytes):
+  --max-results <n>   Maximum offsets returned (default: 32)
+
+Options (hex):
+  --offset <n>        Byte offset to start from (default: 0)
+  --length <n>        Bytes to dump (default: 256, max 65536)
+  --width <n>         Bytes per line (default: 16, max 32)
 
 Options (site):
   --out <dir>         Output directory (default: ./reverso-site)
@@ -230,6 +252,83 @@ export async function run(argv: string[]): Promise<number> {
           return 3;
         }
         printJson(listing);
+        return 0;
+      }
+
+      case "scan": {
+        const target = positional[1];
+        if (!target) throw new UsageError("scan requires a directory");
+        const report = await scanDirectory(target, flagNumber(flags, "max-files", 200, 1, 1000));
+        const format = flagString(flags, "format", "json");
+        const rendered = format === "md" || format === "markdown" ? scanReportToMarkdown(report) : JSON.stringify(report, null, 2);
+        const out = flagString(flags, "out");
+        if (out) {
+          await writeFile(out, rendered);
+          process.stdout.write(`Report written to ${out}\n`);
+        } else {
+          process.stdout.write(rendered + "\n");
+        }
+        return report.errors.length > 0 && report.filesScanned === 0 ? 1 : 0;
+      }
+
+      case "diff": {
+        const a = positional[1];
+        const b = positional[2];
+        if (!a || !b) throw new UsageError("diff requires two files");
+        const [bufA, bufB] = await Promise.all([readCapped(a), readCapped(b)]);
+        const report = diffBuffers(bufA, bufB, a, b);
+        const format = flagString(flags, "format", "json");
+        const out = flagString(flags, "out");
+        const rendered = format === "md" || format === "markdown" ? diffReportToMarkdown(report) : JSON.stringify(report, null, 2);
+        if (out) {
+          await writeFile(out, rendered);
+          process.stdout.write(`Report written to ${out}\n`);
+        } else {
+          process.stdout.write(rendered + "\n");
+        }
+        return 0;
+      }
+
+      case "find-bytes": {
+        const file = positional[1];
+        const pattern = positional[2];
+        if (!file || !pattern) throw new UsageError("find-bytes requires a file and a hex pattern");
+        printJson(findPattern(await readCapped(file), pattern, flagNumber(flags, "max-results", 32, 1, 1000)));
+        return 0;
+      }
+
+      case "hex": {
+        const file = positional[1];
+        if (!file) throw new UsageError("hex requires a file");
+        const buf = await readCapped(file);
+        const offset = flagNumber(flags, "offset", 0, 0);
+        const length = flagNumber(flags, "length", 256, 1, 65536);
+        const width = flagNumber(flags, "width", 16, 1, 32);
+        process.stdout.write(hexDump(buf, offset, length, width) + "\n");
+        return 0;
+      }
+
+      case "wasm": {
+        const file = positional[1];
+        if (!file) throw new UsageError("wasm requires a file");
+        try {
+          printJson(parseWasm(await readCapped(file)));
+        } catch (error) {
+          process.stderr.write(`Not a WebAssembly module: ${(error as Error).message}\n`);
+          return 3;
+        }
+        return 0;
+      }
+
+      case "dex": {
+        const file = positional[1];
+        if (!file) throw new UsageError("dex requires a file");
+        try {
+          printJson(parseDex(await readCapped(file)));
+        } catch (error) {
+          process.stderr.write(`Not a DEX file: ${(error as Error).message}\n`);
+          return 3;
+        }
         return 0;
       }
 

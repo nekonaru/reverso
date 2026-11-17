@@ -72,6 +72,16 @@ with zero runtime dependencies.
 | **Archive inventory** | ZIP/APK/IPA/JAR entry listing with sizes, compression method, encryption flags, type detection and suspicious entry flagging |
 | **Packer signals** | UPX signature and stub detection, plus multi-region high entropy heuristic |
 
+### Inspectors and utilities
+
+| Feature | Description |
+| --- | --- |
+| **Directory triage** | `reverso scan <dir>` recursively triages every file (format, entropy, SHA-256, packer signals) with a format breakdown |
+| **Binary diff** | `reverso diff <a> <b>`: hashes, entropy, size, hardening traits (PIE, RELRO, canary, ASLR, CFG, ...), sections, imports, exports and string categories |
+| **Hex pattern search** | `reverso find-bytes <file> <hex>`: `4d 5a ?? 60`-style patterns with `??` wildcards, plus a classic hex dump via `reverso hex` |
+| **WebAssembly inspector** | `reverso wasm <file>`: sections, types, imports, exports, function/table/memory/global counts and the name section |
+| **DEX inspector** | `reverso dex <file>`: header counts, checksum, and the categorized string table of Android Dalvik executables |
+
 ### Website mirror
 
 | Feature | Description |
@@ -181,10 +191,16 @@ Use `node dist/cli.js <command>` anywhere you would use `reverso <command>`.
 ### Everyday use
 
 - `reverso analyze ./target.bin` for a full triage report (add `--format md --out report.md` for Markdown)
+- `reverso scan ./samples --max-files 500` to triage a whole directory of unknowns
+- `reverso diff ./before.bin ./after.bin` to see exactly what changed between two builds
+- `reverso find-bytes ./firmware.bin "7f 45 4c 46"` to locate byte patterns with wildcards
+- `reverso hex ./mystery.bin --offset 0 --length 256` for a hex dump with offsets
 - `reverso format ./mystery.bin` to identify a file
 - `reverso layout ./target.elf` and `reverso hardening ./win32.exe` for binary structure and protections
 - `reverso strings ./firmware.bin --min-length 6` for categorized strings
 - `reverso js ./app.min.js` to inventory endpoints and secrets in a web bundle
+- `reverso dex ./classes.dex` to inspect an Android DEX string table
+- `reverso wasm ./module.wasm` to inspect a WebAssembly module
 - `reverso site https://example.com --out ./mirror` to mirror a site offline
 - `reverso capabilities` to list every analyzer and MCP tool
 
@@ -205,8 +221,9 @@ Add it to your client configuration:
 ```
 
 Tools exposed: `reverso_analyze`, `reverso_strings`, `reverso_entropy`,
-`reverso_format`, `reverso_layout`, `reverso_hardening`, `reverso_archive_list`
-and `reverso_js_analyze`.
+`reverso_format`, `reverso_layout`, `reverso_hardening`, `reverso_archive_list`,
+`reverso_js_analyze`, `reverso_scan`, `reverso_diff`, `reverso_find_bytes`,
+`reverso_wasm`, `reverso_dex` and `reverso_hex`.
 
 ---
 
@@ -277,7 +294,7 @@ node scripts/verify.mjs   # full pipeline (typecheck, coverage, build, audit)
 
 | Check | Requirement |
 | --- | --- |
-| Unit and integration tests | All pass (84 tests) |
+| Unit and integration tests | All pass (129 tests) |
 | Line coverage | At least 70% |
 | Branch coverage | At least 60% |
 | Type check | `tsc --noEmit`, zero errors |

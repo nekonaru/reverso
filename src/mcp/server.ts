@@ -11,6 +11,11 @@ import { parseMachO } from "../binary/macho.js";
 import { listArchive } from "../archive/zip.js";
 import { analyzeJavaScript } from "../js/jsanal.js";
 import { VERSION } from "../version.js";
+import { findPattern, hexDump } from "../inspect/bytes.js";
+import { scanDirectory } from "../inspect/scan.js";
+import { diffBuffers } from "../inspect/diff.js";
+import { parseWasm } from "../inspect/wasm.js";
+import { parseDex } from "../inspect/dex.js";
 
 const MCP_PROTOCOL_VERSION = "2025-06-18";
 const MAX_MCP_FILE_BYTES = 64 * 1024 * 1024;
@@ -150,6 +155,104 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       const listing = listArchive(await readCapped(filePathArg(args)));
       if (!listing) throw new Error("Not a readable ZIP archive");
       return listing;
+    },
+  },
+  {
+    name: "reverso_find_bytes",
+    description: "Search a file for a hex byte pattern (e.g. \"4d 5a 90 00\", wildcards \"??\" allowed). Returns match offsets. Returns JSON.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        pattern: { type: "string", description: "Hex pattern, e.g. '4d 5a ?? 60'" },
+        maxResults: { type: "number", minimum: 1, maximum: 1000, default: 32 },
+      },
+      required: ["path", "pattern"],
+    },
+    handler: async (args) => {
+      const maxResults = typeof args["maxResults"] === "number" ? Math.min(Math.max(Math.floor(args["maxResults"]), 1), 1000) : 32;
+      const pattern = args["pattern"];
+      if (typeof pattern !== "string" || pattern.trim().length === 0) {
+        throw new Error("Missing required string argument: pattern");
+      }
+      return findPattern(await readCapped(filePathArg(args)), pattern, maxResults);
+    },
+  },
+  {
+    name: "reverso_wasm",
+    description: "Inspect a WebAssembly module: sections, types, imports, exports, function/table/memory/global counts, and the name section. Returns JSON.",
+    inputSchema: {
+      type: "object",
+      properties: { path: { type: "string" } },
+      required: ["path"],
+    },
+    handler: async (args) => parseWasm(await readCapped(filePathArg(args))),
+  },
+  {
+    name: "reverso_dex",
+    description: "Inspect an Android DEX file: header counts, checksum, and the string table with categorized samples (URLs, keys, class descriptors). Returns JSON.",
+    inputSchema: {
+      type: "object",
+      properties: { path: { type: "string" } },
+      required: ["path"],
+    },
+    handler: async (args) => parseDex(await readCapped(filePathArg(args))),
+  },
+  {
+    name: "reverso_scan",
+    description: "Recursively scan a directory (skipping node_modules, .git, dist) and triage every file. Returns per-file format, entropy, SHA-256 and packer signals plus a format breakdown. Returns JSON.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Directory to scan" },
+        maxFiles: { type: "number", minimum: 1, maximum: 1000, default: 200 },
+      },
+      required: ["path"],
+    },
+    handler: async (args) => {
+      const maxFiles = typeof args["maxFiles"] === "number" ? Math.floor(args["maxFiles"]) : 200;
+      return scanDirectory(filePathArg(args), maxFiles);
+    },
+  },
+  {
+    name: "reverso_diff",
+    description: "Compare two files structurally: hashes, size, entropy, format, packer signals, sections, imports, exports and string categories. Returns JSON.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        a: { type: "string", description: "Path of the first file (baseline)" },
+        b: { type: "string", description: "Path of the second file (candidate)" },
+      },
+      required: ["a", "b"],
+    },
+    handler: async (args) => {
+      const a = args["a"];
+      const b = args["b"];
+      if (typeof a !== "string" || typeof b !== "string" || !a || !b) {
+        throw new Error("Missing required string arguments: a, b");
+      }
+      return diffBuffers(await readCapped(a), await readCapped(b), a, b);
+    },
+  },
+  {
+    name: "reverso_hex",
+    description: "Hex dump of a file region with offsets and an ASCII gutter. Returns the dump as text.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        offset: { type: "number", minimum: 0, default: 0 },
+        length: { type: "number", minimum: 1, maximum: 4096, default: 256 },
+        width: { type: "number", minimum: 1, maximum: 32, default: 16 },
+      },
+      required: ["path"],
+    },
+    handler: async (args) => {
+      const buf = await readCapped(filePathArg(args));
+      const offset = typeof args["offset"] === "number" ? Math.max(0, Math.floor(args["offset"])) : 0;
+      const length = typeof args["length"] === "number" ? Math.min(Math.max(Math.floor(args["length"]), 1), 4096) : 256;
+      const width = typeof args["width"] === "number" ? Math.min(Math.max(Math.floor(args["width"]), 1), 32) : 16;
+      return { dump: hexDump(buf, offset, length, width) };
     },
   },
   {

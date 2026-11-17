@@ -97,4 +97,29 @@ describe("run", () => {
     const { code } = await captureStdout(() => run(["doctor"]));
     expect(code).toBe(0);
   });
+
+  it("runs find-bytes and reports offsets", async () => {
+    const { code, output } = await captureStdout(() => run(["find-bytes", file, "7f 45 4c 46"]));
+    expect(code).toBe(0);
+    expect(JSON.parse(output).offsets).toContain(0);
+  });
+
+  it("prints a hex dump", async () => {
+    const { code, output } = await captureStdout(() => run(["hex", file, "--length", "8"]));
+    expect(code).toBe(0);
+    expect(output).toContain("00000000");
+  });
+
+  it("scans a directory", async () => {
+    const { code, output } = await captureStdout(() => run(["scan", dir, "--max-files", "10"]));
+    expect(code).toBe(0);
+    expect(JSON.parse(output).filesScanned).toBeGreaterThanOrEqual(1);
+  });
+
+  it("returns 3 for wasm on a non-wasm file", async () => {
+    const txt = join(dir, "not-wasm.txt");
+    await writeFile(txt, "definitely not a wasm module, but long enough to be text\n".repeat(4));
+    const { code } = await captureStdout(() => run(["wasm", txt]));
+    expect(code).toBe(3);
+  });
 });

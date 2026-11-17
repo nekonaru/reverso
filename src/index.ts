@@ -1,4 +1,5 @@
 /** Public API of Reverso. The CLI in cli.ts is a thin wrapper over these functions. */
+export { VERSION } from "./version.js";
 export { analyzeBuffer, analyzeFile, MAX_INPUT_BYTES } from "./core/analyze.js";
 export { reportToMarkdown } from "./core/report.js";
 export { detectFormat } from "./core/format.js";
@@ -14,3 +15,8 @@ export { analyzeJavaScript } from "./js/jsanal.js";
 export { mirrorSite, localPathFor, relativeLocalPath, assertPublicIp } from "./web/mirror.js";
 export { runDoctor } from "./doctor.js";
 export { handleMessage, TOOL_DEFINITIONS } from "./mcp/server.js";
+export { parseHexPattern, findPattern, hexDump } from "./inspect/bytes.js";
+export { parseWasm } from "./inspect/wasm.js";
+export { parseDex } from "./inspect/dex.js";
+export { scanDirectory, scanReportToMarkdown } from "./inspect/scan.js";
+export { diffBuffers, diffReportToMarkdown } from "./inspect/diff.js";
