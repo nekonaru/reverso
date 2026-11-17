@@ -1,0 +1,16 @@
+/** Public API of Reverso. The CLI in cli.ts is a thin wrapper over these functions. */
+export { analyzeBuffer, analyzeFile, MAX_INPUT_BYTES } from "./core/analyze.js";
+export { reportToMarkdown } from "./core/report.js";
+export { detectFormat } from "./core/format.js";
+export { shannonEntropy, highEntropyWindows } from "./core/entropy.js";
+export { hashBuffer } from "./core/hashes.js";
+export { extractStrings, summarizeCategories, categorize } from "./core/strings.js";
+export { parseElf } from "./binary/elf.js";
+export { parsePe } from "./binary/pe.js";
+export { parseMachO } from "./binary/macho.js";
+export { hardeningReport } from "./binary/hardening.js";
+export { listArchive } from "./archive/zip.js";
+export { analyzeJavaScript } from "./js/jsanal.js";
+export { mirrorSite, localPathFor, relativeLocalPath, assertPublicIp } from "./web/mirror.js";
+export { runDoctor } from "./doctor.js";
+export { handleMessage, TOOL_DEFINITIONS } from "./mcp/server.js";
