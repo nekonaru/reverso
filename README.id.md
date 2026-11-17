@@ -1,106 +1,196 @@
-# Reverso
+<div align="center">
 
-[![CI](https://github.com/nekonaru/reverso/actions/workflows/ci.yml/badge.svg)](https://github.com/nekonaru/reverso/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-f4c430.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/node-%5E22.23.4%20%7C%7C%20%5E24.22.1-339933.svg)](https://nodejs.org/)
+<img src="assets/logo/final-symbol.svg" width="120" alt="Reverso logo">
 
-**Toolkit reverse engineering yang berjalan native.** Analisis statis untuk
-binary, bundle JavaScript dan website dari satu CLI atau satu MCP server,
-dengan nol dependensi runtime dan tanpa tool berbayar.
+# Reverso: Native reverse engineering toolkit
 
-*[Read the English version](README.md)*
+<p><b>Satu CLI dan satu MCP server untuk reverse engineering statis.<br/>
+Binary, bundle JavaScript dan website, dianalisis secara offline, tanpa
+dependensi.</b></p>
 
-Reverso adalah proyek independen. Reverso adalah implementasi ulang (rebuild)
-berdasarkan studi terhadap tooling reverse engineering yang tersedia secara
-publik; tidak ada kode sumber dari proyek lain yang disertakan. Gunakan hanya
-pada berkas dan sistem yang memang boleh kamu analisis.
+<a href="https://github.com/nekonaru/reverso/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/nekonaru/reverso?style=flat-square"></a>
+<a href="https://github.com/nekonaru/reverso/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/nekonaru/reverso/ci.yml?branch=main&style=flat-square"></a>
+<a href="https://nodejs.org/"><img alt="Node.js" src="https://img.shields.io/badge/node-%5E22.23.4%20%7C%7C%20%5E24.22.1%20%7C%7C%20%3E%3D26.12.1-339933?style=flat-square"></a>
+<a href="https://github.com/nekonaru/reverso"><img alt="Platform" src="https://img.shields.io/badge/platform-Linux%20%C2%B7%20macOS%20%C2%B7%20Windows-101E26?style=flat-square"></a>
+<a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-f4c430?style=flat-square"></a>
 
-## Yang bisa kamu lakukan
+</div>
 
-| Perintah | Fungsinya |
+<br />
+
+[English](README.md) | **Bahasa Indonesia**
+
+> [!NOTE]
+> Gunakan Reverso hanya pada berkas, aplikasi dan website yang memang boleh kamu analisis.
+
+---
+
+## Daftar Isi
+
+- [Tentang](#tentang)
+- [Fitur](#fitur)
+- [Kebutuhan](#kebutuhan)
+- [Instalasi](#instalasi)
+- [Penggunaan](#penggunaan)
+- [Struktur Proyek](#struktur-proyek)
+- [Pengembangan](#pengembangan)
+- [Pengujian](#pengujian)
+- [Keamanan](#keamanan)
+- [Continuous Integration](#continuous-integration)
+- [FAQ](#faq)
+- [Penulis](#penulis)
+- [Lisensi](#lisensi)
+
+---
+
+## Tentang
+
+Reverso adalah toolkit reverse engineering yang berjalan native, untuk developer,
+peneliti keamanan dan tooling agentic. Reverso mentriase binary yang tidak
+dikenal, menginventarisasi bundle JavaScript, dan mirror website untuk
+analisis offline, dari satu perintah atau satu MCP server. Semuanya berjalan
+lokal: tanpa Ghidra, Hopper, IDA, Python atau license server untuk analyzer
+bwaan, dan paketnya dikirim dengan nol dependensi runtime.
+
+> _"Analisis apa pun, tanpa instalasi apa pun."_
+
+---
+
+## Fitur
+
+### Analyzer
+
+| Fitur | Deskripsi |
 | --- | --- |
-| `reverso analyze <file>` | Laporan triase lengkap: hash, entropy, format, strings, layout, hardening, daftar arsip, analisis JavaScript |
-| `reverso format <file>` | Deteksi format dari magic bytes: ELF, PE, Mach-O, ZIP, APK, IPA, JAR, WASM, DEX, PCAP dan lainnya |
-| `reverso layout <file>` | Struktur ELF, PE dan Mach-O: section, program header, impor, ekspor |
-| `reverso hardening <file>` | Cek hardening: PIE, NX stack, stack canary, RELRO, FORTIFY, ASLR, NX compat, Control Flow Guard, Authenticode |
-| `reverso strings <file>` | String printable ASCII dan UTF-16LE, dikategorikan (URL, IPv4, email, JWT, key, secret) |
-| `reverso entropy <file>` | Entropy Shannon dengan deteksi region entropy tinggi (area yang dipack/dienskripsi) |
-| `reverso archive <file>` | Daftar entri ZIP/APK/IPA/JAR dengan deteksi tipe dan penandaan entri mencurigakan |
-| `reverso js <file>` | Analisis bundle JavaScript: minifikasi, skor obfuscation, framework, source map, URL, endpoint API, secret |
-| `reverso site <url>` | Mirror website secara lokal, same origin, dengan rewrite link dan penjaga alamat privat |
-| `reverso mcp` | Jalankan MCP stdio server yang mengekspos semua analyzer sebagai tool |
-| `reverso doctor` | Cek lingkungan runtime |
-| `reverso capabilities` | Daftar semua analyzer, perintah dan MCP tool |
+| **Laporan triase lengkap** | `reverso analyze <file>`: hash, ukuran, entropy, format, strings, layout, hardening, daftar arsip dan analisis JavaScript dalam satu laporan, sebagai JSON atau Markdown |
+| **Deteksi format** | Deteksi magic byte untuk ELF, PE, Mach-O, ZIP (APK/IPA/JAR), WASM, DEX, PDF, PCAP dan lainnya |
+| **Struktur binary** | Struktur ELF, PE dan Mach-O: section, program header, impor, ekspor |
+| **Cek hardening** | PIE, NX stack, stack canary, RELRO dan FORTIFY untuk ELF; ASLR, NX compat, Control Flow Guard, high entropy VA dan Authenticode untuk PE |
+| **Analisis entropy** | Entropy Shannon dengan deteksi region entropy tinggi untuk konten yang dipack atau dienkripsi |
+| **Intelijen strings** | String ASCII dan UTF-16LE, dikategorikan sebagai URL, IPv4, email, path, JWT, AWS key, GitHub token, Slack token, Google API key, private key dan assigned secret |
+| **Analisis JavaScript** | Deteksi minifikasi, skor obfuscation dengan indikator, fingerprint framework (webpack, React, Vue, Angular, Next.js, Vite, Svelte, jQuery), referensi source map, ekstraksi URL dan endpoint API, secret scanning |
+| **Inventaris arsip** | Daftar entri ZIP/APK/IPA/JAR dengan ukuran, metode kompresi, flag enkripsi, deteksi tipe dan penandaan entri mencurigakan |
+| **Sinyal packer** | Deteksi tanda tangan dan stub UPX, plus heuristik region entropy tinggi |
 
-Semuanya berjalan offline. Analisis tidak butuh jaringan, tidak butuh Ghidra,
-Hopper, IDA atau license server.
+### Mirror website
+
+| Fitur | Deskripsi |
+| --- | --- |
+| **Mirror same-origin** | `reverso site <url>` mirror HTML, CSS dan asset secara lokal dengan rewrite link ke relatif |
+| **Penjaga keamanan** | Menolak alamat loopback, privat, link-local dan reserved (IP literal dan jawaban DNS) kecuali `--allow-private` diberikan |
+| **Batas resource** | Membatasi jumlah halaman, kedalaman, ukuran file dan total byte; menolak redirect lintas origin |
+
+### Otomasi
+
+| Fitur | Deskripsi |
+| --- | --- |
+| **MCP server** | `reverso mcp` mengekspos setiap analyzer sebagai tool Model Context Protocol lewat stdio (protokol `2025-06-18`) |
+| **Ramah script** | Output JSON secara default, laporan Markdown dengan `--format md`, tulis ke file dengan `--out` |
+| **Self-check lingkungan** | `reverso doctor` memvalidasi runtime sebelum kamu bergantung padanya |
+
+---
 
 ## Kebutuhan
 
-- Node.js `^22.23.4 || ^24.22.1 || >=26.12.1`
-- Tanpa native addon, tanpa Python, tanpa tool eksternal
+| Dependensi | Versi Minimum | Catatan |
+| --- | --- | --- |
+| **Node.js** | `^22.23.4`, `^24.22.1` atau `>=26.12.1` | ESM, TypeScript strict, nol dependensi runtime |
+
+Tidak dibutuhkan toolchain C/C++, Python, Java atau tool analisis eksternal.
+
+> [!TIP]
+> Kamu bisa menjalankan CLI langsung dari repo tanpa menginstalnya secara global.
+> Lihat [Instalasi](#instalasi), Opsi B.
+
+### Belum pernah pakai terminal? Mulai dari sini
+
+<details>
+<summary><b>Cara membuka terminal</b></summary>
+
+1. **Windows:** tekan `Win + R`, ketik `wt` atau `powershell`, tekan Enter.
+2. **macOS:** tekan `Cmd + Space`, ketik `Terminal`, tekan Enter.
+3. **Linux:** tekan `Ctrl + Alt + T`, atau cari `Terminal` di menu aplikasi.
+
+</details>
+
+---
 
 ## Instalasi
 
-Dari source (metode yang didukung saat ini):
+### Opsi A: Perintah global (npm link)
+
+1. Pasang Git dan Node.js (lihat detail Git di bawah).
+2. Clone, build dan link:
+
+   ```bash
+   git clone https://github.com/nekonaru/reverso.git
+   cd reverso
+   npm ci
+   npm run build
+   npm link
+   ```
+
+   > [!IMPORTANT]
+   > `npm run build` harus selesai tanpa error. Jika ada type error,
+   > berhenti dan buka issue, jangan jalankan binary-nya.
+
+3. Verifikasi: `reverso doctor`
+
+<details>
+<summary><b>Saya sudah punya Git</b></summary>
+
+Lewati langkah Git di atas. `git --version` seharusnya menampilkan versi.
+
+</details>
+
+<details>
+<summary><b>Saya belum punya Git</b></summary>
+
+Unduh arsip source dari
+[GitHub](https://github.com/nekonaru/reverso/archive/refs/heads/main.zip), unzip,
+lalu jalankan `npm ci`, `npm run build` dan `npm link` di folder hasil ekstrak.
+
+</details>
+
+### Opsi B: Jalankan dari repo tanpa instalasi
 
 ```bash
 git clone https://github.com/nekonaru/reverso.git
 cd reverso
 npm ci
 npm run build
-npm link        # menaruh `reverso` di PATH kamu
+node dist/cli.js doctor
 ```
 
-Lalu:
+Gunakan `node dist/cli.js <perintah>` di mana pun kamu memakai `reverso <perintah>`.
 
-```bash
-reverso doctor
-```
+---
 
-## Mulai cepat
+## Penggunaan
 
-```bash
-# Triase binary yang tidak dikenal
-reverso analyze ./target.bin
+### Jalankan pertama kali
 
-# Laporan yang sama dalam Markdown, ditulis ke file
-reverso analyze ./target.bin --format md --out report.md
+1. Cek runtime: `reverso doctor`
+2. Analisis sebuah berkas: `reverso analyze ./some-file.bin`
+3. Arahkan MCP client kamu ke `reverso mcp` (lihat di bawah)
 
-# Struktur binary dan hardening
-reverso layout ./target.elf
-reverso hardening ./win32.exe
+> [!NOTE]
+> Reverso itu statis sepenuhnya. Ia tidak pernah mengeksekusi berkas yang kamu analisis.
 
-# File ini file apa?
-reverso format ./mystery.bin
+### Penggunaan sehari-hari
 
-# Inventaris endpoint dan secret dari bundle web
-reverso js ./app.min.js
+- `reverso analyze ./target.bin` untuk laporan triase lengkap (tambahkan `--format md --out report.md` untuk Markdown)
+- `reverso format ./mystery.bin` untuk mengidentifikasi berkas
+- `reverso layout ./target.elf` dan `reverso hardening ./win32.exe` untuk struktur dan proteksi binary
+- `reverso strings ./firmware.bin --min-length 6` untuk strings terkategori
+- `reverso js ./app.min.js` untuk inventaris endpoint dan secret di bundle web
+- `reverso site https://example.com --out ./mirror` untuk mirror website offline
+- `reverso capabilities` untuk daftar semua analyzer dan MCP tool
 
-# Mirror site untuk analisis offline (tetap di origin yang sama)
-reverso site https://example.com --out ./mirror --max-pages 200
+### Pakai Reverso dari MCP client
 
-# JSON untuk scripting
-reverso strings ./firmware.bin --min-length 6 | jq '.categories'
-```
-
-## Pakai Reverso dari MCP client
-
-`reverso mcp` berbicara [Model Context Protocol](https://modelcontextprotocol.io/)
-lewat stdio (protokol `2025-06-18`). Tambahkan ke client kamu:
-
-```json
-{
-  "mcpServers": {
-    "reverso": {
-      "command": "node",
-      "args": ["/path/ke/reverso/dist/cli.js", "mcp"]
-    }
-  }
-}
-```
-
-Atau, kalau paketnya sudah terpasang secara global:
+`reverso mcp` berbicara Model Context Protocol lewat stdio (protokol `2025-06-18`).
+Tambahkan ke konfigurasi client kamu:
 
 ```json
 {
@@ -113,72 +203,183 @@ Atau, kalau paketnya sudah terpasang secara global:
 }
 ```
 
-Tool yang diekspos:
+Tool yang diekspos: `reverso_analyze`, `reverso_strings`, `reverso_entropy`,
+`reverso_format`, `reverso_layout`, `reverso_hardening`, `reverso_archive_list`
+dan `reverso_js_analyze`.
 
-| Tool | Input | Output |
-| --- | --- | --- |
-| `reverso_analyze` | `path` | Laporan analisis statis lengkap (JSON) |
-| `reverso_strings` | `path`, `minLength?` | String terkategori (JSON) |
-| `reverso_entropy` | `path` | Entropy Shannon dan region entropy tinggi (JSON) |
-| `reverso_format` | `path` | Deteksi format (JSON) |
-| `reverso_layout` | `path` | Struktur ELF/PE/Mach-O (JSON) |
-| `reverso_hardening` | `path` | Cek hardening (JSON) |
-| `reverso_archive_list` | `path` | Daftar ZIP/APK/IPA/JAR (JSON) |
-| `reverso_js_analyze` | `path` atau `source` inline | Analisis JavaScript (JSON) |
+---
 
-## Catatan keamanan
+## Struktur Proyek
 
-- **Berkas dianalisis secara read-only.** Reverso tidak pernah mengeksekusi
-  target.
-- **Mirror website tetap di origin awal** dan menolak mengambil alamat
-  loopback, privat, link-local dan reserved (baik IP literal maupun jawaban
-  DNS) kecuali kamu memakai `--allow-private` secara eksplisit.
-- **Ukuran output dibatasi.** Input dibatasi 256 MiB, string yang diekstrak
-  5000, entri arsip 5000, dan pembacaan via MCP 64 MiB.
+```text
+reverso/
+├── src/
+│   ├── core/         # deteksi format, entropy, hash, strings, orkestrasi, report
+│   ├── binary/       # parser ELF / PE / Mach-O dan cek hardening
+│   ├── archive/      # parser keluarga ZIP (deteksi APK/IPA/JAR)
+│   ├── js/           # analisis bundle JavaScript
+│   ├── web/          # mirror website (same origin, penjaga alamat privat)
+│   ├── mcp/          # MCP stdio server
+│   ├── doctor.ts     # self-check lingkungan
+│   ├── index.ts      # API publik
+│   └── cli.ts        # dispatcher perintah (lapisan tipis di atas engine)
+├── tests/            # unit dan integration test (vitest)
+├── docs/
+│   ├── specs/        # spesifikasi yang bisa diuji (done criteria)
+│   └── brand.md      # penggunaan logo dan warna
+├── assets/logo/      # file logo final (mark, lockup, ikon)
+├── scripts/verify.mjs# pipeline verifikasi lokal
+├── README.md         # versi Inggris
+└── README.id.md      # file ini
+```
 
-Gunakan Reverso hanya pada target yang memang boleh kamu analisis.
+---
 
 ## Pengembangan
 
+### Menambah analyzer baru
+
+1. Tulis analyzer di `src/` (fungsi murni, hindari I/O sebisa mungkin).
+2. Daftarkan di `src/core/analyze.ts` dan ekspor dari `src/index.ts`.
+3. Tambahkan perintah CLI di `src/cli.ts` dan MCP tool di `src/mcp/server.ts`.
+4. Tambahkan test di `tests/` dan jalankan `node scripts/verify.mjs`.
+5. Dokumentasikan perintah di kedua README dan spesifikasinya di `docs/specs/`.
+
+### Menjalankan pipeline verifikasi
+
+1. `node scripts/verify.mjs` (typecheck, test dengan coverage, build, audit).
+2. Semuanya harus hijau sebelum pull request dibuka.
+3. CI menjalankan pipeline yang sama di Ubuntu dan Windows, Node 22 dan 24.
+
+### Memotong rilis
+
+1. Naikkan versi di `package.json` (dan konstanta banner CLI) sebagai `MAJOR.MINOR.PATCH`.
+2. Perbarui `CHANGELOG.md` dan `CHANGELOG.id.md` dengan section yang sama seperti release notes.
+3. Buka pull request; merge setelah CI hijau.
+4. Tag `vX.Y.Z` pada commit hasil merge dan push tag-nya.
+5. Terbitkan GitHub Release dengan catatan bilingual (judul `Project vX.Y.Z`).
+
+> [!WARNING]
+> `dist/` dibuat oleh `npm run build`. Jangan pernah edit isi `dist/` dengan
+> tangan dan jangan commit file di dalamnya.
+
+---
+
+## Pengujian
+
 ```bash
 npm ci
-node scripts/verify.mjs   # typecheck + test dengan coverage + build + audit
-npm test                  # test saja
+npm test                  # test suite
 npm run test:coverage     # test dengan threshold coverage
+node scripts/verify.mjs   # pipeline penuh (typecheck, coverage, build, audit)
 ```
 
-Threshold coverage dijalankan otomatis (70% lines, 60% branches). Pipeline CI
-menjalankan verifikasi yang sama di Ubuntu dan Windows, pada Node 22 dan 24,
-plus secret scan. Branch protection mewajibkan semuanya hijau.
+| Cek | Syarat |
+| --- | --- |
+| Unit dan integration test | Semua pass (83 test) |
+| Line coverage | Minimal 70% |
+| Branch coverage | Minimal 60% |
+| Type check | `tsc --noEmit`, nol error |
+| Audit dependensi | `npm audit --omit=dev --audit-level=high`, nol temuan |
+| Secret scan | Job gitleaks di CI, nol temuan |
 
-Struktur proyek:
+Linting adalah TypeScript compiler dalam strict mode (`strict`,
+`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`). Tidak ada konfigurasi
+linter terpisah secara desain.
 
-```text
-src/
-├── core/      # deteksi format, entropy, hash, strings, orkestrasi, report
-├── binary/    # parser ELF / PE / Mach-O dan cek hardening
-├── archive/   # parser keluarga ZIP (deteksi APK/IPA/JAR)
-├── js/        # analisis bundle JavaScript
-├── web/       # mirror website (same origin, penjaga alamat privat)
-├── mcp/       # MCP stdio server
-└── cli.ts     # dispatcher perintah (lapisan tipis di atas engine)
-tests/         # unit dan integration test
-docs/specs/    # spesifikasi yang bisa diuji
-```
+---
 
-Spesifikasi dengan done criteria ada di [docs/specs/core.md](docs/specs/core.md).
+## Keamanan
 
-## Keterbatasan
+Reverso memproses berkas yang tidak dipercaya tanpa mengeksekusinya, membatasi
+ukuran input (256 MiB untuk file, 64 MiB lewat MCP) dan menolak alamat jaringan
+privat di web mirror secara default. Paket ini tidak punya dependensi runtime.
+Dependensi production diaudit di CI pada setiap push, dan semua CI berjalan
+dengan secret scan.
 
-- Reverso melakukan analisis **statis**. Reverso tidak mengkompilasi balik ke
-  pseudocode; Reverso mem-parse, menginventarisasi dan memberi skor. Untuk
-  decompilation interaktif, arahkan decompiler ke berkasnya sendiri dan pakai
-  Reverso untuk triase, ekstraksi dan pelaporan.
-- Analisis JavaScript bersifat heuristik (regex dan pola), seperti semua
-  analisis JS statis. Skor obfuscation adalah indikator, bukan bukti.
-- Mirror website dibatasi same-origin secara desain; ia tidak akan merayapi
-  satu domain penuh.
+Menemukan vulnerability? Gunakan private vulnerability reporting di repositori
+ini (tab Security, "Report a vulnerability"). Jangan buka issue publik untuk
+laporan keamanan.
+
+---
+
+## Continuous Integration
+
+| Workflow | Tujuan |
+| --- | --- |
+| `ci.yml` | Job verify (typecheck, test dengan coverage, build, audit) di Ubuntu dan Windows, Node 22 dan 24, plus secret scan gitleaks |
+
+Branch protection pada `main` mewajibkan setiap check ini pass sebelum merge.
+Rilis hanya dibuat dari `main` yang hijau setelah security gate selesai.
+
+---
+
+## FAQ
+
+<details>
+<summary><b>Apakah Reverso mengeksekusi binary yang dianalisis?</b></summary>
+
+Tidak. Semua analisis bersifat statis. Tidak ada yang dimuat, dijalankan atau diemulasikan.
+
+</details>
+
+<details>
+<summary><b>Bisakah decompile ke pseudocode?</b></summary>
+
+Tidak. Reverso mentriase, menginventarisasi dan memberi skor. Untuk decompilation,
+berikan berkasnya ke decompiler khusus; pakai Reverso untuk triase, ekstraksi dan pelaporan.
+
+</details>
+
+<details>
+<summary><b>Apakah butuh koneksi internet?</b></summary>
+
+Tidak untuk analisis. Test suite dan integration test mirror hanya bind ke
+loopback saat development. Analisis itu sendiri tidak menyentuh jaringan sama sekali.
+
+</details>
+
+<details>
+<summary><b>Kenapa `reverso analyze` menandai entropy tinggi?</b></summary>
+
+Entropy tinggi (di atas sekitar 7 bit per byte) biasanya berarti konten yang
+dikompresi, dienkripsi atau dipack. Periksa region yang dilaporkan dan sinyal
+packer sebelum berasumsi malware.
+
+</details>
+
+<details>
+<summary><b>Apakah Reverso sudah terbit di npm?</b></summary>
+
+Belum. Install dari source seperti di Instalasi. Manifest paketnya sudah siap
+untuk rilis; publikasi menunggu rilis stabil pertama.
+
+</details>
+
+<details>
+<summary><b>Bagaimana hubungan Reverso dengan tool reverse engineering lain?</b></summary>
+
+Reverso adalah proyek independen yang dibangun ulang dari studi terhadap
+tooling yang tersedia secara publik. Tidak ada source code dari proyek lain
+yang disertakan. Reverso melengkapi tool interaktif berat, bukan menggantikannya.
+
+</details>
+
+---
+
+## Penulis
+
+<div align="center">
+
+| [![Nicolas Dwi Dharma](https://github.com/nekonaru.png?size=100)](https://github.com/nekonaru) |
+|:---:|
+| **Nicolas Dwi Dharma** |
+| [github.com/nekonaru](https://github.com/nekonaru) |
+
+</div>
+
+---
 
 ## Lisensi
 
-MIT. Lihat [LICENSE](LICENSE).
+Didistribusikan di bawah **MIT License**. Lihat [`LICENSE`](LICENSE) untuk informasi lebih lanjut.
