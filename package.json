@@ -1,0 +1,58 @@
+{
+  "name": "reverso",
+  "version": "0.1.0",
+  "description": "Native-first reverse engineering toolkit: static binary, JavaScript bundle and web app analysis from a CLI or an MCP server.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
+  },
+  "bin": {
+    "reverso": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.id.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./mcp": "./dist/mcp/server.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "verify": "node scripts/verify.mjs"
+  },
+  "keywords": [
+    "reverse-engineering",
+    "binary-analysis",
+    "static-analysis",
+    "cli",
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "pe",
+    "elf",
+    "macho",
+    "javascript-analysis",
+    "entropy",
+    "strings"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nekonaru/reverso.git"
+  },
+  "homepage": "https://github.com/nekonaru/reverso",
+  "bugs": "https://github.com/nekonaru/reverso/issues",
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "^5.1.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
