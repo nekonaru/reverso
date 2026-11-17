@@ -69,7 +69,14 @@ export function analyzeBuffer(buf: Uint8Array, label: string): AnalysisReport {
     ? hardeningReport(buf, format.format)
     : null;
 
-  const archive = format.format === "zip" ? listArchive(buf) : null;
+  let archive: ArchiveListing | null = null;
+  if (format.format === "zip") {
+    try {
+      archive = listArchive(buf);
+    } catch {
+      archive = null; // Malformed archive; the rest of the report still stands.
+    }
+  }
 
   const javascript = maybeAnalyzeJavaScript(buf, label);
 
