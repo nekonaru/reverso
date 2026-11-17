@@ -1,5 +1,44 @@
 # Changelog
 
+## v1.1.0
+
+Big introspection update: whole-directory triage, structural binary diffing,
+byte-level search, and native WebAssembly and Android DEX inspectors.
+
+### New features
+
+- **Directory triage.** `reverso scan <dir>` recursively analyzes every file
+  (skipping node_modules, .git and dist), with a format breakdown, per-file
+  SHA-256, entropy and packer signals.
+- **Binary diff.** `reverso diff <a> <b>` compares size, entropy, hardening
+  traits, sections, imports, exports and string categories between two files.
+- **Byte search and hex dump.** `reverso find-bytes` locates hex patterns
+  (`4d 5a ?? 60`) with wildcards; `reverso hex` prints a classic hex dump.
+- **WebAssembly inspector.** `reverso wasm` parses the binary format: sections,
+  types, imports, exports, counts and the name section.
+- **Android DEX inspector.** `reverso dex` parses the header, checksum and
+  the categorized string table (URLs, AWS keys, class descriptors, more).
+- **Six new MCP tools.** `reverso_scan`, `reverso_diff`, `reverso_find_bytes`,
+  `reverso_hex`, `reverso_wasm`, `reverso_dex` (14 tools total).
+
+### Improvements
+
+- **Audit hardening and performance.** Bulk `TextDecoder` string extraction,
+  single-source version constant, symlink-aware CLI launch detection for npm
+  bin shims, executable bit on `dist/cli.js` via postbuild, numeric flags
+  clamped to sane ranges, `capabilities` derived from the tool registry.
+- **Richer diff signals.** ELF, PE and Mach-O hardening traits (PIE, RELRO,
+  canary, stripped, ASLR, CFG, ...) are compared explicitly.
+
+### Bug fixes
+
+- **Boolean flags from strings.** `--allow-private true` now parses as true;
+  previously it silently left the guard enabled.
+- **Corrupt archives.** A malformed ZIP EOCD no longer reaches the parser
+  unchecked; the archive section is omitted instead of crashing.
+- **Capabilities drift.** The MCP tool list in `capabilities` is now generated
+  from the registry instead of a stale hardcoded list.
+
 ## v1.0.0
 
 First stable release. Reverso triages unknown files natively, with no external
