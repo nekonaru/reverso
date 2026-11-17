@@ -34,7 +34,7 @@ describe("MCP server", () => {
     expect(response?.result).toEqual({});
   });
 
-  it("lists all 8 tools", async () => {
+  it("lists all 14 tools", async () => {
     const response = await rpc("tools/list");
     const result = response?.result as { tools: Array<{ name: string }> };
     const names = result.tools.map((t) => t.name);
@@ -47,8 +47,14 @@ describe("MCP server", () => {
       "reverso_hardening",
       "reverso_archive_list",
       "reverso_js_analyze",
+      "reverso_find_bytes",
+      "reverso_wasm",
+      "reverso_dex",
+      "reverso_scan",
+      "reverso_diff",
+      "reverso_hex",
     ]));
-    expect(result.tools).toHaveLength(8);
+    expect(result.tools).toHaveLength(14);
   });
 
   it("runs tools/call reverso_format on a file", async () => {
@@ -79,6 +85,36 @@ describe("MCP server", () => {
 
   it("ignores notifications", async () => {
     expect(await handleMessage({ jsonrpc: "2.0", method: "notifications/initialized" })).toBeNull();
+  });
+
+  it("runs tools/call reverso_find_bytes on a file", async () => {
+    const response = await rpc("tools/call", { name: "reverso_find_bytes", arguments: { path: file, pattern: "7f 45 4c 46" } });
+    const result = response?.result as { content: Array<{ text: string }> };
+    const payload = JSON.parse(result.content[0]!.text);
+    expect(payload.offsets).toContain(0);
+  });
+
+  it("runs tools/call reverso_hex with a small length", async () => {
+    const response = await rpc("tools/call", { name: "reverso_hex", arguments: { path: file, length: 16 } });
+    const result = response?.result as { content: Array<{ text: string }> };
+    expect(JSON.parse(result.content[0]!.text).dump).toContain("00000000");
+  });
+
+  it("runs tools/call reverso_diff on two files", async () => {
+    const other = join(dir, "other.bin");
+    await writeFile(other, Buffer.concat([Buffer.from([0x7f, 0x45, 0x4c, 0x46, 1, 1, 1, 0]), Buffer.from("different-content\x00", "ascii")]));
+    const response = await rpc("tools/call", { name: "reverso_diff", arguments: { a: file, b: other } });
+    const result = response?.result as { content: Array<{ text: string }> };
+    const payload = JSON.parse(result.content[0]!.text);
+    expect(payload.identical).toBe(false);
+    expect(payload.differences.length).toBeGreaterThan(0);
+  });
+
+  it("runs tools/call reverso_scan on a directory", async () => {
+    const response = await rpc("tools/call", { name: "reverso_scan", arguments: { path: dir, maxFiles: 10 } });
+    const result = response?.result as { content: Array<{ text: string }> };
+    const payload = JSON.parse(result.content[0]!.text);
+    expect(payload.filesScanned).toBeGreaterThanOrEqual(1);
   });
 
   it("reports a tool error for missing files without crashing", async () => {
