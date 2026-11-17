@@ -145,7 +145,7 @@ export function parseElf(buf: Uint8Array): ElfInfo {
 
   const type = u16(16);
   const machine = u16(18);
-  const entry = word(bitness === 64 ? 24 : 24);
+  const entry = word(24); // e_entry: 24 in both ELF32 and ELF64
 
   let phoff: number, shoff: number, phnum: number, shnum: number, shstrndx: number, phentsize: number, shentsize: number;
   if (bitness === 64) {

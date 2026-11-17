@@ -105,16 +105,15 @@ export function extractUtf16Strings(
   }
 }
 
+const asciiDecoder = new TextDecoder("ascii");
+const utf16Decoder = new TextDecoder("utf-16le");
+
 function asciiSlice(buf: Uint8Array, start: number, end: number): string {
-  let s = "";
-  for (let i = start; i < end; i++) s += String.fromCharCode(buf[i]!);
-  return s;
+  return asciiDecoder.decode(buf.subarray(start, end));
 }
 
 function utf16Slice(buf: Uint8Array, start: number, end: number): string {
-  let s = "";
-  for (let i = start; i < end; i += 2) s += String.fromCharCode(buf[i]!);
-  return s;
+  return utf16Decoder.decode(buf.subarray(start, end));
 }
 
 export function extractStrings(buf: Uint8Array, options: ExtractOptions = {}): ExtractedString[] {
