@@ -114,6 +114,24 @@ describe("mirrorSite end to end", () => {
     expect(report.errors).toHaveLength(0);
   });
 
+  it("skips files that exceed the per-file cap", async () => {
+    const big = "x".repeat(4096);
+    const capped = createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "text/plain" });
+      res.end(big);
+    });
+    const cappedPort = await new Promise<number>((resolvePromise) => {
+      capped.listen(0, "127.0.0.1", () => resolvePromise((capped.address() as AddressInfo).port));
+    });
+    try {
+      const report = await mirrorSite(`http://127.0.0.1:${cappedPort}/`, { outDir, allowPrivate: true, maxFileBytes: 1024 });
+      expect(report.pages).toHaveLength(0);
+      expect(report.skipped.length).toBeGreaterThan(0);
+    } finally {
+      await new Promise<void>((resolvePromise) => capped.close(() => resolvePromise()));
+    }
+  });
+
   it("blocks loopback targets when allowPrivate is false", async () => {
     await expect(mirrorSite(`${origin}/`, { outDir })).rejects.toThrow(/private/i);
   });
