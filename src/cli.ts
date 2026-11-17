@@ -15,7 +15,7 @@ import { mirrorSite } from "./web/mirror.js";
 import { runDoctor } from "./doctor.js";
 import { startStdioServer } from "./mcp/server.js";
 
-export const VERSION = "0.1.0";
+export const VERSION = "1.0.0";
 
 const USAGE = `reverso ${VERSION}
 Native-first reverse engineering toolkit.

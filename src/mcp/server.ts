@@ -207,7 +207,7 @@ export async function handleMessage(message: JsonRpcMessage): Promise<JsonRpcMes
           result: {
             protocolVersion: MCP_PROTOCOL_VERSION,
             capabilities: { tools: {} },
-            serverInfo: { name: "reverso", version: "0.1.0" },
+            serverInfo: { name: "reverso", version: "1.0.0" },
           },
         };
       case "ping":
