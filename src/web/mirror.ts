@@ -86,12 +86,12 @@ export async function mirrorSite(startUrl: string, options: MirrorOptions): Prom
           continue;
         }
         const contentType = (response.headers.get("content-type") ?? "").split(";")[0]!.trim().toLowerCase();
-        const bytes = new Uint8Array(await response.arrayBuffer());
-        if (bytes.length > opts.maxFileBytes) {
-          report.skipped.push({ url: url.toString(), reason: `exceeds per-file cap (${bytes.length} bytes)` });
+        const bytes = await readResponseBodyCapped(response, opts.maxFileBytes);
+        if (bytes === null) {
+          report.skipped.push({ url: url.toString(), reason: "exceeds per-file cap or unreadable body" });
           continue;
         }
-        report.totalBytes += bytes.length;
+        report.totalBytes += bytes.byteLength;
 
         const localPath = localPathFor(outDir, url);
         await mkdir(dirname(localPath), { recursive: true });
@@ -118,7 +118,7 @@ export async function mirrorSite(startUrl: string, options: MirrorOptions): Prom
           url: url.toString(),
           localPath: relative(outDir, localPath),
           status: response.status,
-          bytes: bytes.length,
+          bytes: bytes.byteLength,
           contentType,
         });
       } catch (error) {
@@ -169,6 +169,40 @@ async function fetchWithGuards(url: URL, opts: ResolvedMirrorOptions, origin: st
     current = next;
   }
   return null;
+}
+
+/** Reads a response body without ever buffering more than `maxBytes`. */
+async function readResponseBodyCapped(response: Response, maxBytes: number): Promise<Uint8Array | null> {
+  const contentLength = Number(response.headers.get("content-length") ?? "0");
+  if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+    await response.body?.cancel().catch(() => undefined);
+    return null;
+  }
+  if (!response.body) return new Uint8Array(0);
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        return null;
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return null;
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return out;
 }
 
 /** Blocks loopback, private, link-local and reserved addresses unless explicitly allowed. */
