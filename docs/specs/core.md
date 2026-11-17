@@ -1,4 +1,4 @@
-# Spec: Reverso core (v0.1.0)
+# Spec: Reverso core (v1.0.0)
 
 Goal: a native-first reverse engineering toolkit that runs fully locally.
 One CLI and one MCP server share the same analysis engines. No proprietary

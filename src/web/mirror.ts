@@ -155,7 +155,7 @@ async function fetchWithGuards(url: URL, opts: ResolvedMirrorOptions, origin: st
     const response = await fetch(current, {
       redirect: "manual",
       signal: AbortSignal.timeout(opts.timeoutMs),
-      headers: { "user-agent": "reverso/0.1.0 (+https://github.com/nekonaru/reverso)" },
+      headers: { "user-agent": "reverso/1.0.0 (+https://github.com/nekonaru/reverso)" },
     });
     if (!REDIRECT_STATUSES.has(response.status)) {
       if (!response.ok) return null;
