@@ -1,5 +1,44 @@
 # Changelog
 
+## v1.1.0
+
+Update introspeksi besar: triase seluruh direktori, diff binary struktural,
+pencarian tingkat byte, serta inspector WebAssembly dan Android DEX native.
+
+### Fitur baru
+
+- **Triase direktori.** `reverso scan <dir>` menganalisis seluruh file secara
+  rekursif (melewati node_modules, .git dan dist), dengan rincian per format,
+  SHA-256, entropy dan sinyal packer per file.
+- **Diff binary.** `reverso diff <a> <b>` membandingkan ukuran, entropy, trait
+  hardening, section, impor, ekspor dan kategori string antara dua file.
+- **Pencarian byte dan hex dump.** `reverso find-bytes` mencari pola hex
+  (`4d 5a ?? 60`) dengan wildcard; `reverso hex` menampilkan hex dump klasik.
+- **Inspector WebAssembly.** `reverso wasm` mem-parse binary format: section,
+  tipe, impor, ekspor, jumlah dan section name.
+- **Inspector Android DEX.** `reverso dex` mem-parse header, checksum dan
+  string table terkategori (URL, AWS key, class descriptor, dan lainnya).
+- **Enam MCP tool baru.** `reverso_scan`, `reverso_diff`, `reverso_find_bytes`,
+  `reverso_hex`, `reverso_wasm`, `reverso_dex` (total 14 tool).
+
+### Peningkatan
+
+- **Audit hardening dan performa.** Ekstraksi string massal `TextDecoder`,
+  konstanta versi satu sumber, deteksi peluncuran CLI tahan-symlink untuk
+  npm bin shim, bit executable pada `dist/cli.js` via postbuild, flag numerik
+  dibatasi rentang wajar, `capabilities` diturunkan dari registry tool.
+- **Sinyal diff lebih kaya.** Trait hardening ELF, PE dan Mach-O (PIE, RELRO,
+  canary, stripped, ASLR, CFG, ...) dibandingkan secara eksplisit.
+
+### Perbaikan bug
+
+- **Flag boolean dari string.** `--allow-private true` kini diparse sebagai
+  true; sebelumnya guard tetap aktif tanpa disadari.
+- **Arsip rusak.** EOCD ZIP yang malformed tidak lagi sampai ke parser tanpa
+  pengecekan; section arsip cukup dihilangkan, bukan crash.
+- **Capabilities drift.** Daftar MCP tool di `capabilities` kini dibangkitkan
+  dari registry, bukan daftar hardcoded yang kedaluwarsa.
+
 ## v1.0.0
 
 Rilis stabil pertama. Reverso mentriase berkas yang tidak dikenal secara
