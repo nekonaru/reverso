@@ -37,7 +37,8 @@ describe("analyzeJavaScript", () => {
   });
 
   it("detects JWTs and private keys", () => {
-    const source = "const t = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJVadQss5c;\nconst k = '-----BEGIN PRIVATE KEY-----';";
+    const jwt = ["eyJhbGciOiJIUzI1NiJ9", "eyJzdWIiOiIxMjM0NTY3ODkwIn0", "testtest"].join(".");
+    const source = `const t = ${jwt};\nconst k = '-----BEGIN PRIVATE KEY-----';`;
     const result = analyzeJavaScript(source);
     expect(result.secrets.map((s) => s.type)).toEqual(expect.arrayContaining(["jwt", "private-key"]));
   });
