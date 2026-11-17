@@ -27,7 +27,7 @@ export function parseHexPattern(input: string): Array<number | null> {
       expanded.push(lower);
       continue;
     }
-    // Contiguous form: "4d5a??90" — pairs only, hex digits and wildcards.
+    // Contiguous form: "4d5a??90", pairs only, hex digits and wildcards.
     if (/^([0-9a-f?*]{2})+$/.test(lower)) {
       for (let i = 0; i + 2 <= lower.length; i += 2) {
         const pair = lower.slice(i, i + 2);
