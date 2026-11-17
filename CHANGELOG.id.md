@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.1
+
+Rilis pembersihan internal. Tidak ada perubahan perilaku.
+
+### Perbaikan bug
+
+- **Tanda baca komentar.** Satu komentar berisi em dash; diganti koma. Tidak ada perubahan kode, API atau output.
+
 ## v1.1.0
 
 Update introspeksi besar: triase seluruh direktori, diff binary struktural,

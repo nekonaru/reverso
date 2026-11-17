@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.1
+
+Internal cleanup release. No behaviour change.
+
+### Bug fixes
+
+- **Comment punctuation.** One comment contained an em dash; replaced with a comma. No code, API or output change.
+
 ## v1.1.0
 
 Big introspection update: whole-directory triage, structural binary diffing,
