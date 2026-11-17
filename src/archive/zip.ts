@@ -30,7 +30,7 @@ const SUSPICIOUS_EXTENSIONS = [
 
 export function listArchive(buf: Uint8Array, maxEntries = MAX_ENTRIES): ArchiveListing | null {
   const eocdOffset = findEocd(buf);
-  if (eocdOffset === null) return null;
+  if (eocdOffset === null || eocdOffset + 22 > buf.length) return null;
 
   const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
   const u16 = (o: number) => dv.getUint16(o, true);

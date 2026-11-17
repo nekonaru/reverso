@@ -10,6 +10,7 @@ import { parsePe } from "../binary/pe.js";
 import { parseMachO } from "../binary/macho.js";
 import { listArchive } from "../archive/zip.js";
 import { analyzeJavaScript } from "../js/jsanal.js";
+import { VERSION } from "../version.js";
 
 const MCP_PROTOCOL_VERSION = "2025-06-18";
 const MAX_MCP_FILE_BYTES = 64 * 1024 * 1024;
@@ -207,7 +208,7 @@ export async function handleMessage(message: JsonRpcMessage): Promise<JsonRpcMes
           result: {
             protocolVersion: MCP_PROTOCOL_VERSION,
             capabilities: { tools: {} },
-            serverInfo: { name: "reverso", version: "1.0.0" },
+            serverInfo: { name: "reverso", version: VERSION },
           },
         };
       case "ping":

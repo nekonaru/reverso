@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, extname, join, relative, resolve, sep } from "node:path";
 import { createHash } from "node:crypto";
 import net from "node:net";
+import { VERSION } from "../version.js";
 
 export interface MirrorOptions {
   outDir: string;
@@ -155,7 +156,7 @@ async function fetchWithGuards(url: URL, opts: ResolvedMirrorOptions, origin: st
     const response = await fetch(current, {
       redirect: "manual",
       signal: AbortSignal.timeout(opts.timeoutMs),
-      headers: { "user-agent": "reverso/1.0.0 (+https://github.com/nekonaru/reverso)" },
+      headers: { "user-agent": `reverso/${VERSION} (+https://github.com/nekonaru/reverso)` },
     });
     if (!REDIRECT_STATUSES.has(response.status)) {
       if (!response.ok) return null;

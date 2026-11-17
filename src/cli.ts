@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
-import { analyzeFile } from "./core/analyze.js";
+import { realpathSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { analyzeFile, MAX_INPUT_BYTES } from "./core/analyze.js";
 import { reportToMarkdown } from "./core/report.js";
 import { detectFormat } from "./core/format.js";
 import { shannonEntropy, highEntropyWindows, round3 } from "./core/entropy.js";
@@ -13,9 +16,13 @@ import { listArchive } from "./archive/zip.js";
 import { analyzeJavaScript } from "./js/jsanal.js";
 import { mirrorSite } from "./web/mirror.js";
 import { runDoctor } from "./doctor.js";
-import { startStdioServer } from "./mcp/server.js";
+import { startStdioServer, TOOL_DEFINITIONS } from "./mcp/server.js";
+import { VERSION } from "./version.js";
 
-export const VERSION = "1.0.0";
+export { VERSION };
+
+const ANALYZERS = ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js"] as const;
+const COMMANDS = [...ANALYZERS, "site", "mcp", "doctor", "capabilities", "help", "version"] as const;
 
 const USAGE = `reverso ${VERSION}
 Native-first reverse engineering toolkit.
@@ -92,12 +99,27 @@ function flagString(flags: Map<string, string | true>, name: string, fallback?: 
   return value ?? fallback;
 }
 
-function flagNumber(flags: Map<string, string | true>, name: string, fallback: number): number {
+/** Accepts --flag, --flag=true/false/1/0/yes/no as boolean values. */
+function booleanFlag(flags: Map<string, string | true>, name: string): boolean {
+  const value = flags.get(name);
+  if (value === true || value === undefined) return value === true;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on";
+}
+
+function flagNumber(flags: Map<string, string | true>, name: string, fallback: number, min?: number, max?: number): number {
   const value = flagString(flags, name);
-  if (value === undefined || value === "") return fallback;
+  if (value === undefined || value === "") return clamp(fallback, min, max);
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) throw new Error(`Invalid number for --${name}: ${value}`);
-  return parsed;
+  return clamp(parsed, min, max);
+}
+
+function clamp(value: number, min?: number, max?: number): number {
+  let out = value;
+  if (min !== undefined && out < min) out = min;
+  if (max !== undefined && out > max) out = max;
+  return out;
 }
 
 function printJson(value: unknown): void {
@@ -106,7 +128,7 @@ function printJson(value: unknown): void {
 
 async function readCapped(file: string): Promise<Uint8Array> {
   const buf = await readFile(file);
-  if (buf.length > 256 * 1024 * 1024) throw new Error(`File too large: ${file}`);
+  if (buf.length > MAX_INPUT_BYTES) throw new Error(`File too large: ${file}`);
   return buf;
 }
 
@@ -175,7 +197,7 @@ export async function run(argv: string[]): Promise<number> {
       case "strings": {
         const file = positional[1];
         if (!file) throw new UsageError("strings requires a file");
-        const minLength = flagNumber(flags, "min-length", 4);
+        const minLength = flagNumber(flags, "min-length", 4, 2, 64);
         const buf = await readCapped(file);
         const strings = extractStrings(buf, { minLength });
         printJson({ total: strings.length, categories: summarizeCategories(strings), strings });
@@ -225,9 +247,9 @@ export async function run(argv: string[]): Promise<number> {
         const outDir = flagString(flags, "out", "reverso-site")!;
         const report = await mirrorSite(url, {
           outDir,
-          maxPages: flagNumber(flags, "max-pages", 100),
-          maxDepth: flagNumber(flags, "max-depth", 5),
-          allowPrivate: flags.get("allow-private") === true,
+          maxPages: flagNumber(flags, "max-pages", 100, 1, 10000),
+          maxDepth: flagNumber(flags, "max-depth", 5, 0, 32),
+          allowPrivate: booleanFlag(flags, "allow-private"),
         });
         printJson({
           startUrl: report.startUrl,
@@ -247,18 +269,9 @@ export async function run(argv: string[]): Promise<number> {
 
       case "capabilities":
         printJson({
-          analyzers: ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js"],
-          commands: ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js", "site", "mcp", "doctor"],
-          mcpTools: [
-            "reverso_analyze",
-            "reverso_strings",
-            "reverso_entropy",
-            "reverso_format",
-            "reverso_layout",
-            "reverso_hardening",
-            "reverso_archive_list",
-            "reverso_js_analyze",
-          ],
+          analyzers: [...ANALYZERS],
+          commands: [...COMMANDS],
+          mcpTools: TOOL_DEFINITIONS.map((tool) => tool.name),
           formats: ["elf32", "elf64", "pe", "macho32", "macho64", "macho-fat", "zip", "apk", "ipa", "jar", "wasm", "dex", "pcap"],
         });
         return 0;
@@ -285,9 +298,18 @@ export async function run(argv: string[]): Promise<number> {
 
 class UsageError extends Error {}
 
-// Run when executed directly (not imported by tests).
-const invokedAsScript = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, "/").split("/").slice(-2).join("/"));
-if (invokedAsScript || process.argv[1]?.endsWith("cli.js") || process.argv[1]?.endsWith("cli.ts")) {
+// Run when executed directly (not imported by tests). Symlink-aware so npm bin shims work.
+function safeReal(path: string): string {
+  try {
+    return realpathSync(path);
+  } catch {
+    return resolve(path);
+  }
+}
+
+const invokedAsScript = process.argv[1] !== undefined
+  && safeReal(fileURLToPath(import.meta.url)) === safeReal(process.argv[1]);
+if (invokedAsScript) {
   run(process.argv.slice(2)).then(
     (code) => process.exit(code),
     (error) => {
