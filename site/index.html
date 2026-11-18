@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Reverso is a native-first reverse engineering toolkit: triage binaries, JavaScript bundles and websites offline from one CLI or one MCP server. Zero runtime dependencies.">
+  <meta name="theme-color" content="#101E26">
+  <meta property="og:title" content="Reverso: Native reverse engineering toolkit">
+  <meta property="og:description" content="Analyze anything. Install nothing. Static analysis of binaries, JavaScript bundles and websites, offline, from one command or one MCP server.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nekonaru.github.io/reverso/">
+  <title>Reverso: Native reverse engineering toolkit</title>
+  <link rel="icon" href="assets/favicon.ico" sizes="48x48">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="assets/site.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="Reverso home">
+      <img src="assets/symbol-tile.svg" alt="" width="44" height="44" class="brand-mark">
+      <span class="brand-name">REVERSO</span>
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      <ul>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#install">Install</a></li>
+        <li><a href="#mcp">MCP</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a class="nav-cta" href="https://github.com/nekonaru/reverso">GitHub</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-copy">
+        <h1 id="hero-heading">Analyze anything.<br><span class="gold">Install nothing.</span></h1>
+        <p class="lede">Reverso is a native-first reverse engineering toolkit. Triage unknown binaries, inventories of JavaScript bundles and offline website mirrors, from one CLI or one MCP server. Everything runs locally, with zero runtime dependencies and no Ghidra, Hopper, IDA or license server.</p>
+        <div class="cta-row">
+          <a class="button button-gold" href="#install">Get started</a>
+          <a class="button button-ghost" href="https://github.com/nekonaru/reverso">View on GitHub</a>
+        </div>
+        <ul class="trust-list" aria-label="Key properties">
+          <li>Zero runtime dependencies</li>
+          <li>Fully offline</li>
+          <li>MIT licensed</li>
+        </ul>
+      </div>
+      <figure class="hero-terminal" aria-label="Example of reverso analyze output">
+        <div class="terminal-chrome" aria-hidden="true">
+          <span class="dot dot-red"></span><span class="dot dot-amber"></span><span class="dot dot-green"></span>
+          <span class="terminal-title">reverso</span>
+        </div>
+        <pre><code><span class="prompt">$</span> reverso analyze ./target.elf
+<span class="dim">{</span>
+  <span class="key">"file"</span>: <span class="str">"target.elf"</span>,
+  <span class="key">"sizeBytes"</span>: <span class="num">48104</span>,
+  <span class="key">"entropy"</span>: <span class="num">6.913</span>,
+  <span class="key">"format"</span>: <span class="dim">{ "format": <span class="str">"elf64"</span>,</span>
+    <span class="dim">"confidence": <span class="str">"high"</span> }</span>,
+  <span class="key">"hashes"</span>: <span class="dim">{ "sha256": <span class="str">"b4f9…c21a"</span> }</span>,
+  <span class="key">"hardening"</span>: <span class="dim">[</span>
+    <span class="dim">{ "name": <span class="str">"PIE"</span>, "status": <span class="str">"pass"</span> }</span>,
+    <span class="dim">{ "name": <span class="str">"NX stack"</span>, "status": <span class="str">"pass"</span> }</span>
+  <span class="dim">]</span>
+<span class="dim">}</span></code></pre>
+      </figure>
+    </section>
+
+    <section id="features" class="section" aria-labelledby="features-heading">
+      <h2 id="features-heading">What it does</h2>
+      <ul class="feature-grid">
+        <li class="feature-card">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="feature-icon"><path d="M4 17l6-5-6-5M12 19h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3>Full triage reports</h3>
+          <p><code>reverso analyze</code>: hashes, entropy, format, strings, layout, hardening, archives and JavaScript in one JSON or Markdown report.</p>
+        </li>
+        <li class="feature-card">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="feature-icon"><path d="M12 3v18M7 8l5-5 5 5M7 16l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3>Native binary parsers</h3>
+          <p>ELF, PE and Mach-O: sections, program headers, imports, exports. Hardening checks for PIE, NX, RELRO, FORTIFY, ASLR, CFG and Authenticode.</p>
+        </li>
+        <li class="feature-card">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="feature-icon"><path d="M8 6l-5 6 5 6M16 6l5 6-5 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3>JavaScript analysis</h3>
+          <p>Minification detection, obfuscation score, framework fingerprints, source maps, URL and API endpoint extraction, secret scanning.</p>
+        </li>
+        <li class="feature-card">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="feature-icon"><path d="M12 8v4l2.5 2.5M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3>DEX and WASM</h3>
+          <p>Android DEX header and categorized string table, plus WebAssembly sections, types, imports, exports and the name section.</p>
+        </li>
+        <li class="feature-card">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="feature-icon"><path d="M4 12h6l2-6 2 12 2-6h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3>Directory triage &amp; diff</h3>
+          <p><code>reverso scan</code> triages a whole directory recursively. <code>reverso diff</code> compares two builds structurally: traits, sections, imports, strings.</p>
+        </li>
+        <li class="feature-card">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="feature-icon"><path d="M9 4h6M10 4v6l-5 9a2.4 2.4 0 0 0 2.2 3.2h9.6A2.4 2.4 0 0 0 19 19l-5-9V4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3>Built for agents</h3>
+          <p><code>reverso mcp</code> serves every analyzer as a Model Context Protocol tool over stdio. Point your agent at it, get deterministic answers.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section id="install" class="section" aria-labelledby="install-heading">
+      <h2 id="install-heading">Install</h2>
+      <p class="section-lede">From source, no global package needed beyond Node.js.</p>
+      <pre class="code-block" role="region" aria-labelledby="install-cmd-label" tabindex="0" id="install-cmd-label"><button class="copy-button" type="button" data-copy="git clone https://github.com/nekonaru/reverso.git
+cd reverso
+npm ci
+npm run build
+npm link
+reverso doctor">Copy</button><code>git clone https://github.com/nekonaru/reverso.git
+cd reverso
+npm ci
+npm run build
+npm link
+reverso doctor</code></pre>
+      <p class="section-note">Requires Node.js <code>^22.23.4</code>, <code>^24.22.1</code> or <code>&gt;=26.12.1</code>. Analysis is static; nothing you analyze is executed. Use only on targets you are authorized to analyze.</p>
+    </section>
+
+    <section id="mcp" class="section" aria-labelledby="mcp-heading">
+      <h2 id="mcp-heading">Use it from your agent</h2>
+      <p class="section-lede"><code>reverso mcp</code> speaks Model Context Protocol over stdio (protocol <code>2025-06-18</code>). Add it to your client:</p>
+      <pre class="code-block" role="region" aria-labelledby="mcp-cmd-label" tabindex="0" id="mcp-cmd-label"><button class="copy-button" type="button" data-copy='{
+  "mcpServers": {
+    "reverso": {
+      "command": "reverso",
+      "args": ["mcp"]
+    }
+  }
+}'>Copy</button><code>{
+  "mcpServers": {
+    "reverso": {
+      "command": "reverso",
+      "args": ["mcp"]
+    }
+  }
+}</code></pre>
+      <ul class="tool-list" aria-label="Exposed MCP tools">
+        <li>reverso_analyze</li><li>reverso_strings</li><li>reverso_entropy</li><li>reverso_format</li>
+        <li>reverso_layout</li><li>reverso_hardening</li><li>reverso_archive_list</li><li>reverso_js_analyze</li>
+        <li>reverso_scan</li><li>reverso_diff</li><li>reverso_find_bytes</li><li>reverso_hex</li>
+        <li>reverso_wasm</li><li>reverso_dex</li>
+      </ul>
+    </section>
+
+    <section id="faq" class="section" aria-labelledby="faq-heading">
+      <h2 id="faq-heading">FAQ</h2>
+      <details>
+        <summary>Does Reverso execute the binary it analyzes?</summary>
+        <p>No. All analysis is static. Nothing is loaded, run or emulated.</p>
+      </details>
+      <details>
+        <summary>Does it need an internet connection?</summary>
+        <p>No for analysis. Only the test suite binds to loopback during development, and <code>reverso site</code> fetches the site you explicitly ask it to mirror.</p>
+      </details>
+      <details>
+        <summary>Can it decompile to pseudocode?</summary>
+        <p>No. Reverso triages, inventories and scores. Feed the file to a dedicated decompiler for interactive work; use Reverso for triage, extraction and reporting.</p>
+      </details>
+      <details>
+        <summary>Is the source code open?</summary>
+        <p>Yes, under MIT. <a href="https://github.com/nekonaru/reverso">github.com/nekonaru/reverso</a></p>
+      </details>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <img src="assets/symbol-ink.svg" alt="" width="28" height="28" class="footer-mark">
+    <p>Reverso is open source software released under the <a href="https://github.com/nekonaru/reverso/blob/main/LICENSE">MIT License</a>. Use it only on targets you are authorized to analyze.</p>
+    <nav aria-label="Project links">
+      <ul>
+        <li><a href="https://github.com/nekonaru/reverso">GitHub</a></li>
+        <li><a href="https://github.com/nekonaru/reverso/releases">Releases</a></li>
+        <li><a href="https://github.com/nekonaru/reverso/blob/main/SECURITY.md">Security</a></li>
+      </ul>
+    </nav>
+  </footer>
+</body>
+</html>
