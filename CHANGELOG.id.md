@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.2.0
+
+Mark baru, dan rumah publik untuk proyek ini.
+
+### Fitur baru
+
+- **Mark baru.** Mengadopsi mark dari pemilik: heksagon terbelah yang larut menjadi byte. Logo kit (tile, transparan, mono ink/gold/white, favicon, app icon, lockup, lockup dua warna) ada di `assets/logo/`.
+- **Project website.** Landing page di [nekonaru.github.io/reverso](https://nekonaru.github.io/reverso/): gambaran umum, instruksi instalasi, konfigurasi MCP dan FAQ, dideploy otomatis ke GitHub Pages pada setiap push yang menyentuh `site/`.
+
+### Peningkatan
+
+- **Dokumentasi.** README kini menautkan project site; homepage repository diperbarui.
+
 ## v1.1.1
 
 Rilis pembersihan internal. Tidak ada perubahan perilaku.

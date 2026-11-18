@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.2.0
+
+A new mark, and a public home for the project.
+
+### New features
+
+- **New mark.** Adopted the owner-provided mark: a split hexagon dissolving into bytes. The logo kit (tile, transparent, mono ink/gold/white, favicons, app icons, lockups, both colour lockups) ships under `assets/logo/`.
+- **Project website.** Landing site at [nekonaru.github.io/reverso](https://nekonaru.github.io/reverso/): overview, install instructions, MCP configuration and FAQ, deployed automatically to GitHub Pages on every push that touches `site/`.
+
+### Improvements
+
+- **Documentation.** READMEs link the project site; repository homepage updated.
+
 ## v1.1.1
 
 Internal cleanup release. No behaviour change.

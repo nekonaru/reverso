@@ -50,7 +50,8 @@ peneliti keamanan dan tooling agentic. Reverso mentriase binary yang tidak
 dikenal, menginventarisasi bundle JavaScript, dan mirror website untuk
 analisis offline, dari satu perintah atau satu MCP server. Semuanya berjalan
 lokal: tanpa Ghidra, Hopper, IDA, Python atau license server untuk analyzer
-bwaan, dan paketnya dikirim dengan nol dependensi runtime.
+bwaan, dan paketnya dikirim dengan nol dependensi runtime. Kunjungi
+[project site](https://nekonaru.github.io/reverso/) untuk ikhtisar singkat.
 
 > _"Analisis apa pun, tanpa instalasi apa pun."_
 
