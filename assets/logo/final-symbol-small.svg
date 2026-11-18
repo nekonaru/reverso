@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
-  <title>Reverso</title>
-  <path fill="#101E26" fill-rule="evenodd" d="M48 36 H204 V144 H48 Z M88 64 H164 V116 H88 Z"/>
-  <rect x="48" y="144" width="48" height="76" fill="#101E26"/>
-  <path fill="#101E26" d="M122 144 L168 144 L206 220 L158 220 Z"/>
-</svg>

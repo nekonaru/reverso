@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 738 340" width="738" height="340">
+  <title>Reverso</title>
+  <g transform="translate(234.5 -26.74) scale(0.5263)"><path fill="#FFFFFF" fill-rule="evenodd" d="M256 66 L91.5 161 L91.5 351 L256 446 Z M243.25 197.9 L183.25 265.9 L160.75 246.1 L220.75 178.1 Z M160.75 265.9 L220.75 333.9 L243.25 314.1 L183.25 246.1 Z"/>
+    <rect x="258.0" y="78.0" width="26.0" height="26.0" rx="3.9" fill="#FFFFFF"/>
+    <rect x="258.0" y="108.0" width="26.0" height="26.0" rx="3.9" fill="#FFFFFF"/>
+    <rect x="258.0" y="138.0" width="26.0" height="26.0" rx="3.9" fill="#FFFFFF"/>
+    <rect x="258.0" y="168.0" width="26.0" height="26.0" rx="3.9" fill="#FFFFFF"/>
+    <rect x="258.0" y="198.0" width="26.0" height="26.0" rx="3.9" fill="#FFFFFF"/>
+    <rect x="258.0" y="228.0" width="26.0" height="26.0" rx="3.9" fill="#FFFFFF"/>
+    <rect x="258.0" y="258.0" width="26.0" height="26.0" rx="3.9" fill="#FFFFFF"/>
+    <rect x="258.0" y="288.0" width="26.0" height="26.0" rx="3.9" fill="#FFFFFF"/>
+    <rect x="258.0" y="318.0" width="26.0" height="26.0" rx="3.9" fill="#FFFFFF"/>
+    <rect x="258.0" y="348.0" width="26.0" height="26.0" rx="3.9" fill="#FFFFFF"/>
+    <rect x="258.0" y="378.0" width="26.0" height="26.0" rx="3.9" fill="#FFFFFF"/>
+    <rect x="258.0" y="408.0" width="26.0" height="26.0" rx="3.9" fill="#FFFFFF"/>
+    <rect x="290.1" y="110.1" width="21.8" height="21.8" rx="3.3" fill="#FFFFFF"/>
+    <rect x="290.1" y="140.1" width="21.8" height="21.8" rx="3.3" fill="#FFFFFF"/>
+    <rect x="290.1" y="170.1" width="21.8" height="21.8" rx="3.3" fill="#FFFFFF"/>
+    <rect x="290.1" y="200.1" width="21.8" height="21.8" rx="3.3" fill="#FFFFFF"/>
+    <rect x="290.1" y="230.1" width="21.8" height="21.8" rx="3.3" fill="#FFFFFF"/>
+    <rect x="290.1" y="260.1" width="21.8" height="21.8" rx="3.3" fill="#FFFFFF"/>
+    <rect x="290.1" y="290.1" width="21.8" height="21.8" rx="3.3" fill="#FFFFFF"/>
+    <rect x="290.1" y="320.1" width="21.8" height="21.8" rx="3.3" fill="#FFFFFF"/>
+    <rect x="290.1" y="350.1" width="21.8" height="21.8" rx="3.3" fill="#FFFFFF"/>
+    <rect x="290.1" y="380.1" width="21.8" height="21.8" rx="3.3" fill="#FFFFFF"/>
+    <rect x="322.2" y="112.2" width="17.6" height="17.6" rx="2.6" fill="#FFFFFF"/>
+    <rect x="322.2" y="172.2" width="17.6" height="17.6" rx="2.6" fill="#FFFFFF"/>
+    <rect x="322.2" y="232.2" width="17.6" height="17.6" rx="2.6" fill="#FFFFFF"/>
+    <rect x="322.2" y="262.2" width="17.6" height="17.6" rx="2.6" fill="#FFFFFF"/>
+    <rect x="322.2" y="322.2" width="17.6" height="17.6" rx="2.6" fill="#FFFFFF"/>
+    <rect x="322.2" y="382.2" width="17.6" height="17.6" rx="2.6" fill="#FFFFFF"/>
+    <rect x="354.3" y="204.3" width="13.4" height="13.4" rx="2.0" fill="#FFFFFF"/>
+    <rect x="354.3" y="234.3" width="13.4" height="13.4" rx="2.0" fill="#FFFFFF"/>
+    <rect x="354.3" y="324.3" width="13.4" height="13.4" rx="2.0" fill="#FFFFFF"/>
+    <rect x="354.3" y="354.3" width="13.4" height="13.4" rx="2.0" fill="#FFFFFF"/>
+    <rect x="386.4" y="176.4" width="9.2" height="9.2" rx="1.4" fill="#FFFFFF"/>
+    <rect x="386.4" y="206.4" width="9.2" height="9.2" rx="1.4" fill="#FFFFFF"/>
+    <rect x="386.4" y="236.4" width="9.2" height="9.2" rx="1.4" fill="#FFFFFF"/>
+    <rect x="386.4" y="296.4" width="9.2" height="9.2" rx="1.4" fill="#FFFFFF"/>
+    <rect x="418.0" y="268.0" width="6.0" height="6.0" rx="0.9" fill="#FFFFFF"/>
+    <rect x="418.0" y="328.0" width="6.0" height="6.0" rx="0.9" fill="#FFFFFF"/>
+  </g>
+  <g transform="translate(48 232) scale(0.84)" fill="#FFFFFF"><rect x="0" y="0" width="26" height="100"/>
+    <path fill-rule="evenodd" d="M26 0 H96 V52 H26 Z M52 13 H83 V39 H52 Z"/>
+    <path d="M44 52 L64 52 L81 100 L61 100 Z"/>
+    
+    <rect x="118" y="0" width="26" height="100"/>
+    <rect x="144" y="0" width="56" height="20"/>
+    <rect x="144" y="40" width="40" height="20"/>
+    <rect x="144" y="80" width="56" height="20"/>
+    
+    <path d="M226 0 H260 L290 74 L320 0 H354 L310 100 H270 Z"/>
+    
+    <rect x="380" y="0" width="26" height="100"/>
+    <rect x="406" y="0" width="56" height="20"/>
+    <rect x="406" y="40" width="40" height="20"/>
+    <rect x="406" y="80" width="56" height="20"/>
+    
+    <rect x="484" y="0" width="26" height="100"/>
+    <path fill-rule="evenodd" d="M510 0 H580 V52 H510 Z M536 13 H567 V39 H536 Z"/>
+    <path d="M528 52 L548 52 L565 100 L545 100 Z"/>
+    
+    <rect x="602" y="0" width="72" height="20"/>
+    <rect x="602" y="20" width="26" height="20"/>
+    <rect x="602" y="40" width="72" height="20"/>
+    <rect x="648" y="60" width="26" height="20"/>
+    <rect x="602" y="80" width="72" height="20"/>
+    
+    <rect x="696" y="0" width="20" height="100"/>
+    <rect x="748" y="0" width="20" height="100"/>
+    <rect x="716" y="0" width="32" height="20"/>
+    <rect x="716" y="80" width="32" height="20"/>
+  </g>
+</svg>

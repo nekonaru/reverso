@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Reverso">
+  <title>Reverso</title>
+      <path fill="#FFFFFF" fill-rule="evenodd" d="M256 66 L91.5 161 L91.5 351 L256 446 Z M243.25 197.9 L183.25 265.9 L160.75 246.1 L220.75 178.1 Z M160.75 265.9 L220.75 333.9 L243.25 314.1 L183.25 246.1 Z"/>
+    <rect x="258.0" y="78.0" width="26.0" height="26.0" rx="4.0"/>
+    <rect x="258.0" y="108.0" width="26.0" height="26.0" rx="4.0"/>
+    <rect x="258.0" y="138.0" width="26.0" height="26.0" rx="4.0"/>
+    <rect x="258.0" y="168.0" width="26.0" height="26.0" rx="4.0"/>
+    <rect x="258.0" y="198.0" width="26.0" height="26.0" rx="4.0"/>
+    <rect x="258.0" y="228.0" width="26.0" height="26.0" rx="4.0"/>
+    <rect x="258.0" y="258.0" width="26.0" height="26.0" rx="4.0"/>
+    <rect x="258.0" y="288.0" width="26.0" height="26.0" rx="4.0"/>
+    <rect x="258.0" y="318.0" width="26.0" height="26.0" rx="4.0"/>
+    <rect x="258.0" y="348.0" width="26.0" height="26.0" rx="4.0"/>
+    <rect x="258.0" y="378.0" width="26.0" height="26.0" rx="4.0"/>
+    <rect x="258.0" y="408.0" width="26.0" height="26.0" rx="4.0"/>
+    <rect x="290.1" y="110.1" width="21.8" height="21.8" rx="4.0"/>
+    <rect x="290.1" y="140.1" width="21.8" height="21.8" rx="4.0"/>
+    <rect x="290.1" y="170.1" width="21.8" height="21.8" rx="4.0"/>
+    <rect x="290.1" y="200.1" width="21.8" height="21.8" rx="4.0"/>
+    <rect x="290.1" y="230.1" width="21.8" height="21.8" rx="4.0"/>
+    <rect x="290.1" y="260.1" width="21.8" height="21.8" rx="4.0"/>
+    <rect x="290.1" y="290.1" width="21.8" height="21.8" rx="4.0"/>
+    <rect x="290.1" y="320.1" width="21.8" height="21.8" rx="4.0"/>
+    <rect x="290.1" y="350.1" width="21.8" height="21.8" rx="4.0"/>
+    <rect x="290.1" y="380.1" width="21.8" height="21.8" rx="4.0"/>
+    <rect x="322.2" y="112.2" width="17.6" height="17.6" rx="4.0"/>
+    <rect x="322.2" y="172.2" width="17.6" height="17.6" rx="4.0"/>
+    <rect x="322.2" y="232.2" width="17.6" height="17.6" rx="4.0"/>
+    <rect x="322.2" y="262.2" width="17.6" height="17.6" rx="4.0"/>
+    <rect x="322.2" y="322.2" width="17.6" height="17.6" rx="4.0"/>
+    <rect x="322.2" y="382.2" width="17.6" height="17.6" rx="4.0"/>
+    <rect x="354.3" y="204.3" width="13.4" height="13.4" rx="3.3"/>
+    <rect x="354.3" y="234.3" width="13.4" height="13.4" rx="3.3"/>
+    <rect x="354.3" y="324.3" width="13.4" height="13.4" rx="3.3"/>
+    <rect x="354.3" y="354.3" width="13.4" height="13.4" rx="3.3"/>
+    <rect x="386.4" y="176.4" width="9.2" height="9.2" rx="2.3"/>
+    <rect x="386.4" y="206.4" width="9.2" height="9.2" rx="2.3"/>
+    <rect x="386.4" y="236.4" width="9.2" height="9.2" rx="2.3"/>
+    <rect x="386.4" y="296.4" width="9.2" height="9.2" rx="2.3"/>
+    <rect x="418.0" y="268.0" width="6.0" height="6.0" rx="1.5"/>
+    <rect x="418.0" y="328.0" width="6.0" height="6.0" rx="1.5"/>
+</svg>

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo/final-symbol.svg" width="120" alt="Reverso logo">
+<img src="assets/logo/symbol-tile.svg" width="120" alt="Reverso logo">
 
 # Reverso: Native reverse engineering toolkit
 

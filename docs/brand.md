@@ -2,25 +2,26 @@
 
 ## Mark
 
-The mark is a single geometric slab: a blocky `R` with a signal-amber diagonal
-leg in the two-tone version. Ink `#101E26` (warm deep petrol) and Signal Amber
-`#F2A900`. One accent, used only for the leg.
+The mark is a gold hexagon with a reverse chevron, dissolving into its own
+bytes on the right half. Left half: the binary, intact. Right half: the same
+binary, taken apart. One accent (Signal Gold), one ink (Reverso Ink).
 
 ## Files
 
 | File | Use |
 | --- | --- |
-| `assets/logo/final-symbol.svg` | Primary mark, one-colour ink |
-| `assets/logo/final-symbol-accent.svg` | Two-tone mark (amber leg) for moments where the brand needs to feel alive |
-| `assets/logo/final-symbol-small.svg` | Small-size cut: larger counter, for 16-32 px |
-| `assets/logo/final-symbol-black.svg` | One-colour black |
-| `assets/logo/final-symbol-white.svg` | One-colour white, for dark backgrounds |
-| `assets/logo/final-symbol-mono-101e26.svg` | One-colour ink in SVG form |
-| `assets/logo/final-symbol-square.svg` | Avatar / social tile master |
-| `assets/logo/final-symbol-favicon.svg` | Favicon master |
-| `assets/logo/final-symbol-app-icon.svg` | App icon (white mark on ink tile) |
-| `assets/logo/lockup-horizontal.svg` | Mark plus wordmark, horizontal |
-| `assets/logo/lockup-stacked.svg` | Mark above wordmark, stacked |
+| `assets/logo/symbol-tile.svg` | Primary mark. Tile master, self-contained on any background |
+| `assets/logo/symbol.svg` | Transparent mark, full colour (gold hex, ink chevron), for dark backgrounds |
+| `assets/logo/symbol-ink.svg` | One-colour ink mark (chevron cut out). Use on light backgrounds |
+| `assets/logo/symbol-gold.svg` | One-colour gold mark, for dark backgrounds |
+| `assets/logo/symbol-white.svg` | One-colour white mark, for ink or photographic backgrounds |
+| `assets/logo/symbol-tile-small.svg` | Small-size cut: two byte columns, bolder cells, for 16-32 px |
+| `assets/logo/symbol-square.svg` | Avatar / social tile master |
+| `assets/logo/app-icon.svg` | App icon (white mark on ink tile) |
+| `assets/logo/lockup-horizontal.svg` | Mark plus wordmark, horizontal (light backgrounds) |
+| `assets/logo/lockup-horizontal-reversed.svg` | Mark plus wordmark, horizontal (dark backgrounds) |
+| `assets/logo/lockup-stacked.svg` | Mark above wordmark, stacked (light backgrounds) |
+| `assets/logo/lockup-stacked-reversed.svg` | Mark above wordmark, stacked (dark backgrounds) |
 | `assets/logo/favicon.ico`, `favicon.svg`, `favicon-16/32/48.png` | Browser tab icons |
 | `assets/logo/icon-192.png`, `icon-512.png`, `maskable-512.png` | Web app icons |
 | `assets/logo/apple-touch-icon.png` | iOS touch icon |
@@ -28,36 +29,37 @@ leg in the two-tone version. Ink `#101E26` (warm deep petrol) and Signal Amber
 
 ## Clear space
 
-Keep a clear space equal to the counter height (the inner hole of the mark) on
-all sides. That is `44` units in a `256` canvas.
+Keep a clear space equal to the byte cell size (`26` units in the `512`
+canvas) on all sides. For the tile mark this is built into the artwork.
 
 ## Minimum sizes
 
-- Mark only: 16 px
-- Horizontal lockup: 128 px wide
-- Below minimum size, use `final-symbol-small.svg`
+- Tile mark: 32 px
+- Mark only (transparent): 24 px
+- Horizontal lockup: 140 px wide
+- Below minimum size, use `symbol-tile-small.svg`
 
 ## Colour
 
 | Role | Value |
 | --- | --- |
-| Ink (body) | `#101E26` |
-| Signal Amber (accent leg, only accent) | `#F2A900` |
+| Reverso Ink (tile, chevron, mono mark) | `#101E26` |
+| Signal Gold (hex, bytes, accents) | `#F4C430` |
 
-Amber is never used for text, backgrounds or large fills. On a dark background,
-use the white one-colour mark; on ink or photography, keep the mark white.
-On white or light backgrounds, use the ink mark. Do not recolour the amber.
+Gold is used for the hexagon and the byte cells only, never for body text on
+white. Mono print: use `symbol-ink.svg` on light stock, `symbol-white.svg` on
+dark stock. Do not recolour the gold.
 
 ## Typography
 
-The wordmark is a custom rectilinear slab, drawn to match the mark. Do not
-re-typeset "REVERSO" in a stock font as a substitute. The wordmark artwork is
-final; only use the shipped lockup files.
+The wordmark is the same rectilinear slab family used across Reverso's media.
+Do not re-typeset "REVERSO" in a stock font as a substitute. Use the shipped
+lockup files.
 
 ## Do not
 
 - Do not rotate, shear, outline, shadow or gradient the mark
 - Do not stretch it non-proportionally
-- Do not place it on clashing backgrounds without enough contrast
-- Do not add outlines or strokes to the slabs
-- Do not animate the leg into arrows or bullets
+- Do not place the transparent gold mark on light backgrounds
+- Do not add strokes or outlines to the hexagon or the bytes
+- Do not re-set the wordmark in another face
