@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><title>Reverso</title><g transform="translate(5.12 5.12) scale(0.48)">
+  
+  <rect width="512" height="512" rx="112" fill="#101E26"/>
+  <path fill="#F4C430" d="M256 66 L91.5 161 L91.5 351 L256 446 Z"/>
+  <g stroke="#101E26" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <polyline points="236,186 168,256 236,326"/>
+  </g>
+  <g fill="#F4C430">
+    <rect x="268" y="84" width="34" height="34" rx="6"/>
+    <rect x="268" y="124" width="34" height="34" rx="6"/>
+    <rect x="268" y="164" width="34" height="34" rx="6"/>
+    <rect x="268" y="204" width="34" height="34" rx="6"/>
+    <rect x="268" y="244" width="34" height="34" rx="6"/>
+    <rect x="268" y="284" width="34" height="34" rx="6"/>
+    <rect x="268" y="324" width="34" height="34" rx="6"/>
+    <rect x="268" y="364" width="34" height="34" rx="6"/>
+    <rect x="314" y="112" width="26" height="26" rx="5"/>
+    <rect x="314" y="152" width="26" height="26" rx="5"/>
+    <rect x="314" y="192" width="26" height="26" rx="5"/>
+    <rect x="314" y="232" width="26" height="26" rx="5"/>
+    <rect x="314" y="272" width="26" height="26" rx="5"/>
+    <rect x="314" y="312" width="26" height="26" rx="5"/>
+    <rect x="314" y="352" width="26" height="26" rx="5"/>
+    <rect x="314" y="392" width="26" height="26" rx="5"/>
+  </g>
+</g></svg>
