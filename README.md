@@ -50,7 +50,8 @@ researchers and agentic tooling. It triages unknown binaries, inventories
 JavaScript bundles, and mirrors websites for offline analysis, from one command
 or one MCP server. Everything runs locally: no Ghidra, Hopper, IDA, Python or
 license server is required for the built-in analyzers, and the package ships
-with zero runtime dependencies.
+with zero runtime dependencies. Visit
+[the project site](https://nekonaru.github.io/reverso/) for a quick overview.
 
 > _"Analyze anything, install nothing."_
 
