@@ -34,7 +34,7 @@ describe("MCP server", () => {
     expect(response?.result).toEqual({});
   });
 
-  it("lists all 14 tools", async () => {
+  it("lists all 16 tools", async () => {
     const response = await rpc("tools/list");
     const result = response?.result as { tools: Array<{ name: string }> };
     const names = result.tools.map((t) => t.name);
@@ -53,8 +53,10 @@ describe("MCP server", () => {
       "reverso_scan",
       "reverso_diff",
       "reverso_hex",
+      "reverso_pcap",
+      "reverso_jwt",
     ]));
-    expect(result.tools).toHaveLength(14);
+    expect(result.tools).toHaveLength(16);
   });
 
   it("runs tools/call reverso_format on a file", async () => {
@@ -115,6 +117,27 @@ describe("MCP server", () => {
     const result = response?.result as { content: Array<{ text: string }> };
     const payload = JSON.parse(result.content[0]!.text);
     expect(payload.filesScanned).toBeGreaterThanOrEqual(1);
+  });
+
+  it("runs tools/call reverso_jwt on a token", async () => {
+    const token = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url") + "." +
+      Buffer.from(JSON.stringify({ iss: "reverso", sub: "x" })).toString("base64url") + ".sig";
+    const response = await rpc("tools/call", { name: "reverso_jwt", arguments: { token } });
+    const result = response?.result as { content: Array<{ text: string }> };
+    const payload = JSON.parse(result.content[0]!.text);
+    expect(payload.algorithm).toBe("HS256");
+    expect(payload.signatureVerified).toBe(false);
+  });
+
+  it("runs tools/call reverso_pcap on a capture", async () => {
+    const { makePcap } = await import("./pcap-helper.js");
+    const pcapPath = join(dir, "capture.pcap");
+    await writeFile(pcapPath, makePcap());
+    const response = await rpc("tools/call", { name: "reverso_pcap", arguments: { path: pcapPath } });
+    const result = response?.result as { content: Array<{ text: string }> };
+    const payload = JSON.parse(result.content[0]!.text);
+    expect(payload.packets).toBe(3);
+    expect(payload.protocols["tls"]).toBe(1);
   });
 
   it("reports a tool error for missing files without crashing", async () => {

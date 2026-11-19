@@ -172,6 +172,9 @@ function diffTraits(
     if (ra.layout.pe.machine !== rb.layout.pe.machine) {
       differences.push(`PE machine changed (${ra.layout.pe.machineName} -> ${rb.layout.pe.machineName})`);
     }
+    if (ra.layout.pe.imphash !== rb.layout.pe.imphash) {
+      differences.push(`PE imphash changed (${ra.layout.pe.imphash ?? "none"} -> ${rb.layout.pe.imphash ?? "none"})`);
+    }
   }
 
   if (ra.layout?.macho && rb.layout?.macho) {

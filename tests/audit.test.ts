@@ -49,6 +49,28 @@ describe("analyzeBuffer on degenerate input", () => {
   });
 });
 
+describe("ELF strict magic validation", () => {
+  it("parseElf throws on invalid EI_CLASS and EI_DATA", async () => {
+    const { parseElf } = await import("../src/binary/elf.js");
+    const garbage = new Uint8Array(64);
+    garbage.set([0x7f, 0x45, 0x4c, 0x46, 3, 1, 1, 0], 0); // EI_CLASS 3
+    expect(() => parseElf(garbage)).toThrow(/EI_CLASS/);
+    const garbage2 = new Uint8Array(64);
+    garbage2.set([0x7f, 0x45, 0x4c, 0x46, 2, 9, 1, 0], 0); // EI_DATA 9
+    expect(() => parseElf(garbage2)).toThrow(/EI_DATA/);
+  });
+
+  it("parses a zeroed but structurally consistent PE without throwing", () => {
+    const buf = new Uint8Array(0x400);
+    buf.set([0x4d, 0x5a], 0);
+    new DataView(buf.buffer).setUint32(0x3c, 0x80, true);
+    new DataView(buf.buffer).setUint32(0x80, 0x00004550, true);
+    const pe = parsePe(buf);
+    expect(pe.imports).toEqual([]);
+    expect(pe.exports).toEqual([]);
+  });
+});
+
 describe("listArchive on corrupt input", () => {
   it("returns null for an archive whose central directory pointer is out of bounds", () => {
     const buf = new Uint8Array(64);

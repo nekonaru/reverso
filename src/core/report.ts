@@ -47,6 +47,10 @@ export function reportToMarkdown(report: AnalysisReport): string {
     lines.push(`- **Sections:** ${elf.sections.length}, program headers: ${elf.programHeaders.length}`);
     if (elf.definedSymbols.length > 0) lines.push(`- **Defined dynamic symbols:** ${elf.definedSymbols.length}`);
     if (elf.undefinedSymbols.length > 0) lines.push(`- **Undefined dynamic symbols:** ${elf.undefinedSymbols.join(", ").slice(0, 400)}`);
+    const packed = elf.sections.filter((s) => s.entropy > 7.0).slice(0, 5);
+    if (packed.length > 0) {
+      lines.push(`- **High-entropy sections (packing candidates):** ${packed.map((s) => `${s.name} (${s.entropy})`).join(", ")}`);
+    }
     lines.push("");
   }
 
@@ -57,10 +61,15 @@ export function reportToMarkdown(report: AnalysisReport): string {
     lines.push(`- **Machine:** ${pe.machineName}, ${pe.bitness}-bit, subsystem ${pe.subsystemName}`);
     lines.push(`- **Entry point (RVA):** 0x${pe.entryPoint.toString(16)}, image base 0x${pe.imageBase.toString(16)}`);
     lines.push(`- **Sections:** ${pe.sections.map((s) => s.name).join(", ") || "none"}`);
+    if (pe.imphash) lines.push(`- **ImpHash:** \`${pe.imphash}\``);
     if (pe.imports.length > 0) {
       lines.push(`- **Imports:** ${pe.imports.map((i) => i.dll).join(", ")}`);
     }
     if (pe.exports.length > 0) lines.push(`- **Exports:** ${pe.exports.slice(0, 20).join(", ")}${pe.exports.length > 20 ? ", ..." : ""}`);
+    const packed = pe.sections.filter((s) => s.entropy > 7.0).slice(0, 5);
+    if (packed.length > 0) {
+      lines.push(`- **High-entropy sections (packing candidates):** ${packed.map((s) => `${s.name} (${s.entropy})`).join(", ")}`);
+    }
     lines.push("");
   }
 

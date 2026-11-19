@@ -23,10 +23,12 @@ import { diffBuffers, diffReportToMarkdown } from "./inspect/diff.js";
 import { findPattern, hexDump } from "./inspect/bytes.js";
 import { parseWasm } from "./inspect/wasm.js";
 import { parseDex } from "./inspect/dex.js";
+import { parsePcap } from "./inspect/pcap.js";
+import { decodeJwt } from "./inspect/jwt.js";
 
 export { VERSION };
 
-const ANALYZERS = ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js", "scan", "diff", "find-bytes", "wasm", "dex", "hex"] as const;
+const ANALYZERS = ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js", "scan", "diff", "find-bytes", "wasm", "dex", "pcap", "jwt", "hex"] as const;
 const COMMANDS = [...ANALYZERS, "site", "mcp", "doctor", "capabilities", "help", "version"] as const;
 
 const USAGE = `reverso ${VERSION}
@@ -42,6 +44,8 @@ Commands:
   hex <file>          Hex dump of a file region (--offset, --length, --width)
   wasm <file>         Inspect a WebAssembly module
   dex <file>          Inspect an Android DEX file
+  pcap <file>         Inspect a classic PCAP capture (protocol stats)
+  jwt <token|file>    Decode a JWT (header, payload, expiry; signature NOT verified)
   analyze <file...>   Full static analysis report
   layout <file>       ELF/PE/Mach-O structure (sections, imports, exports)
   hardening <file>    Hardening checks (PIE, NX, ASLR, RELRO, CFG, ...)
@@ -74,6 +78,9 @@ Options (hex):
   --offset <n>        Byte offset to start from (default: 0)
   --length <n>        Bytes to dump (default: 256, max 65536)
   --width <n>         Bytes per line (default: 16, max 32)
+
+Options (jwt):
+  --file <path>       Read the token from a file instead of the argument
 
 Options (site):
   --out <dir>         Output directory (default: ./reverso-site)
@@ -198,11 +205,16 @@ export async function run(argv: string[]): Promise<number> {
         if (!file) throw new UsageError("layout requires a file");
         const buf = await readCapped(file);
         const format = detectFormat(buf).format;
-        if (format === "elf32" || format === "elf64") printJson({ format, elf: parseElf(buf) });
-        else if (format === "pe") printJson({ format, pe: parsePe(buf) });
-        else if (format.startsWith("macho")) printJson({ format, macho: parseMachO(buf) });
-        else {
-          process.stderr.write(`Unsupported format for layout: ${format}\n`);
+        try {
+          if (format === "elf32" || format === "elf64") printJson({ format, elf: parseElf(buf) });
+          else if (format === "pe") printJson({ format, pe: parsePe(buf) });
+          else if (format.startsWith("macho")) printJson({ format, macho: parseMachO(buf) });
+          else {
+            process.stderr.write(`Unsupported format for layout: ${format}\n`);
+            return 3;
+          }
+        } catch (error) {
+          process.stderr.write(`Could not parse ${format} binary: ${(error as Error).message}\n`);
           return 3;
         }
         return 0;
@@ -305,6 +317,33 @@ export async function run(argv: string[]): Promise<number> {
         const length = flagNumber(flags, "length", 256, 1, 65536);
         const width = flagNumber(flags, "width", 16, 1, 32);
         process.stdout.write(hexDump(buf, offset, length, width) + "\n");
+        return 0;
+      }
+
+      case "pcap": {
+        const file = positional[1];
+        if (!file) throw new UsageError("pcap requires a file");
+        try {
+          printJson(parsePcap(await readCapped(file)));
+        } catch (error) {
+          process.stderr.write(`Not a PCAP file: ${(error as Error).message}\n`);
+          return 3;
+        }
+        return 0;
+      }
+
+      case "jwt": {
+        const target = positional[1];
+        const file = flagString(flags, "file");
+        let token = target ?? "";
+        if (file) token = (await readCapped(file)).toString();
+        if (!token) throw new UsageError("jwt requires an inline token or --file <path>");
+        try {
+          printJson(decodeJwt(token));
+        } catch (error) {
+          process.stderr.write(`Not a JWT: ${(error as Error).message}\n`);
+          return 3;
+        }
         return 0;
       }
 

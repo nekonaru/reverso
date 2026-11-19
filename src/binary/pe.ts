@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { shannonEntropy, round3 } from "../core/entropy.js";
+
 export interface PeSection {
   name: string;
   virtualSize: number;
@@ -5,6 +8,7 @@ export interface PeSection {
   sizeOfRawData: number;
   pointerToRawData: number;
   characteristics: string;
+  entropy: number;
 }
 
 export interface PeImport {
@@ -27,6 +31,7 @@ export interface PeInfo {
   sections: PeSection[];
   imports: PeImport[];
   exports: string[];
+  imphash: string | null;
   hasCertificate: boolean;
   isDotNet: boolean;
   aslr: boolean;
@@ -100,6 +105,14 @@ const MAX_DLLS = 100;
 const MAX_EXPORTS = 1000;
 const MAX_SECTIONS = 96;
 
+const sectionEntropy = (buf: Uint8Array, pointerToRawData: number, sizeOfRawData: number): number => {
+  if (sizeOfRawData === 0) return 0;
+  const start = Math.min(pointerToRawData, buf.length);
+  const end = Math.min(pointerToRawData + sizeOfRawData, buf.length);
+  if (end <= start) return 0;
+  return round3(shannonEntropy(buf.subarray(start, end)));
+};
+
 export function parsePe(buf: Uint8Array): PeInfo {
   const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
   const u16 = (o: number) => dv.getUint16(o, true);
@@ -162,6 +175,7 @@ export function parsePe(buf: Uint8Array): PeInfo {
       sizeOfRawData: u32(o + 16),
       pointerToRawData: u32(o + 20),
       characteristics: pickFlags(characteristicsBits, SECTION_CHARACTERISTICS).join(" "),
+      entropy: sectionEntropy(buf, u32(o + 20), u32(o + 16)),
     });
   }
 
@@ -257,6 +271,11 @@ export function parsePe(buf: Uint8Array): PeInfo {
   const certificateDir = dataDirectory(4);
   const clrDir = dataDirectory(14);
 
+  // Import hash in the style popularised by malware clustering: md5 of
+  // comma-joined, lowercased "dll.function" pairs in order of appearance.
+  // Ordinal imports are encoded as "dll.ordN".
+  const imphash = computeImphash(imports);
+
   return {
     bitness,
     machine,
@@ -272,6 +291,7 @@ export function parsePe(buf: Uint8Array): PeInfo {
     sections,
     imports,
     exports,
+    imphash,
     hasCertificate: !isRomImage && certificateDir !== null && certificateDir.size > 0,
     isDotNet: !isRomImage && clrDir !== null && clrDir.rva !== 0,
     aslr: (dllCharacteristicsRaw & 0x0040) !== 0,
@@ -288,4 +308,17 @@ function pickFlags(value: number, table: Array<[number, string]>): string[] {
     if ((value & bit) !== 0) out.push(name);
   }
   return out;
+}
+
+function computeImphash(imports: PeImport[]): string | null {
+  const parts: string[] = [];
+  for (const entry of imports) {
+    const dll = entry.dll.toLowerCase().replace(/\.(dll|ocx|sys|drv|exe)$/i, "");
+    for (const fn of entry.functions) {
+      const normalized = fn.toLowerCase().replace(/^ordinal-(\d+)$/, "ord$1");
+      parts.push(`${dll}.${normalized}`);
+    }
+  }
+  if (parts.length === 0) return null;
+  return createHash("md5").update(parts.join(","), "utf8").digest("hex");
 }
