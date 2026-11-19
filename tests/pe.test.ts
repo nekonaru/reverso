@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { createHash } from "node:crypto";
 import { parsePe } from "../src/binary/pe.js";
 import { hardeningReport } from "../src/binary/hardening.js";
 
@@ -114,6 +115,8 @@ describe("parsePe", () => {
     expect(pe.imports[0]!.functions).toContain("CreateFileA");
     expect(pe.exports).toContain("ReversoExport");
     expect(pe.hasCertificate).toBe(true);
+    expect(pe.imphash).toBe(createHash("md5").update("kernel32.createfilea", "utf8").digest("hex"));
+    expect(pe.sections.every((s) => s.entropy >= 0 && s.entropy <= 8)).toBe(true);
     expect(pe.aslr).toBe(true);
     expect(pe.nxCompat).toBe(true);
     expect(pe.highEntropyVa).toBe(true);

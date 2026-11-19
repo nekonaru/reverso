@@ -18,5 +18,7 @@ export { handleMessage, TOOL_DEFINITIONS } from "./mcp/server.js";
 export { parseHexPattern, findPattern, hexDump } from "./inspect/bytes.js";
 export { parseWasm } from "./inspect/wasm.js";
 export { parseDex } from "./inspect/dex.js";
+export { parsePcap } from "./inspect/pcap.js";
+export { decodeJwt } from "./inspect/jwt.js";
 export { scanDirectory, scanReportToMarkdown } from "./inspect/scan.js";
 export { diffBuffers, diffReportToMarkdown } from "./inspect/diff.js";

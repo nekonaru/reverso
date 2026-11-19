@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.3.0
+
+Kedalaman forensik untuk binary dan capture: PE import hash, entropy per section, serta inspeksi PCAP dan JWT native.
+
+### Fitur baru
+
+- **PE import hash.** `reverso layout` melaporkan PE import hash (`imphash`), dihitung dari descriptor impor sesuai urutan kemunculan.
+- **Entropy per section.** Daftar section ELF dan PE kini membawa Shannon entropy per section; laporan menandai section di atas 7.0 bit sebagai kandidat packer.
+- **Inspector PCAP.** `reverso pcap <file>` mem-parse classic PCAP: versi, snaplen, link type, jumlah paket, durasi, rincian protokol, top talker dan top port tujuan. pcapng dideteksi dan ditolak dengan panduan.
+- **Decoder JWT.** `reverso jwt <token|file>` mendekode header dan payload, mengonversi `iat`/`nbf`/`exp` ke tanggal ISO, menandai token expired, `alg=none`, claim sensitif dan `exp` yang hilang. Signature tidak pernah diverifikasi, secara desain.
+- **Dua MCP tool baru.** `reverso_pcap` dan `reverso_jwt` (total 16 tool).
+
+### Peningkatan
+
+- **Validasi magic ELF ketat.** `parseElf` kini melempar error pada `EI_CLASS`/`EI_DATA` yang tidak valid, bukan menganalisis sampah.
+- **Layout lebih tahan banting.** `reverso layout` keluar dengan kode 3 dan pesan yang jelas saat binary tidak bisa di-parse, bukan error yang tidak tertangani.
+
 ## v1.2.0
 
 Mark baru, dan rumah publik untuk proyek ini.

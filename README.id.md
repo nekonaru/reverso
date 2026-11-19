@@ -65,7 +65,7 @@ bwaan, dan paketnya dikirim dengan nol dependensi runtime. Kunjungi
 | --- | --- |
 | **Laporan triase lengkap** | `reverso analyze <file>`: hash, ukuran, entropy, format, strings, layout, hardening, daftar arsip dan analisis JavaScript dalam satu laporan, sebagai JSON atau Markdown |
 | **Deteksi format** | Deteksi magic byte untuk ELF, PE, Mach-O, ZIP (APK/IPA/JAR), WASM, DEX, PDF, PCAP dan lainnya |
-| **Struktur binary** | Struktur ELF, PE dan Mach-O: section, program header, impor, ekspor |
+| **Struktur binary** | Struktur ELF, PE dan Mach-O: section, program header, impor, ekspor, entropy per section dan PE import hash (`imphash`) |
 | **Cek hardening** | PIE, NX stack, stack canary, RELRO dan FORTIFY untuk ELF; ASLR, NX compat, Control Flow Guard, high entropy VA dan Authenticode untuk PE |
 | **Analisis entropy** | Entropy Shannon dengan deteksi region entropy tinggi untuk konten yang dipack atau dienkripsi |
 | **Intelijen strings** | String ASCII dan UTF-16LE, dikategorikan sebagai URL, IPv4, email, path, JWT, AWS key, GitHub token, Slack token, Google API key, private key dan assigned secret |
@@ -82,6 +82,8 @@ bwaan, dan paketnya dikirim dengan nol dependensi runtime. Kunjungi
 | **Pencarian byte hex** | `reverso find-bytes <file> <hex>`: pola `4d 5a ?? 60` dengan wildcard `??`, plus hex dump klasik lewat `reverso hex` |
 | **Inspector WebAssembly** | `reverso wasm <file>`: section, tipe, impor, ekspor, jumlah function/table/memory/global dan section name |
 | **Inspector DEX** | `reverso dex <file>`: jumlah di header, checksum, dan string table terkategori dari Android Dalvik Executable |
+| **Inspector PCAP** | `reverso pcap <file>`: rincian protokol, top talker dan top port tujuan dari classic PCAP capture |
+| **Decoder JWT** | `reverso jwt <token>`: header, payload, hitung mundur expiry dan peringatan keamanan (signature tidak pernah diverifikasi) |
 
 ### Mirror website
 
@@ -195,6 +197,8 @@ Gunakan `node dist/cli.js <perintah>` di mana pun kamu memakai `reverso <perinta
 - `reverso diff ./versi-lama.bin ./versi-baru.bin` untuk melihat persis apa yang berubah di antara dua build
 - `reverso find-bytes ./firmware.bin "7f 45 4c 46"` untuk mencari pola byte dengan wildcard
 - `reverso hex ./mystery.bin --offset 0 --length 256` untuk hex dump dengan offset
+- `reverso pcap ./capture.pcap` untuk statistik protokol dan top talker
+- `reverso jwt ./token.txt` untuk mendekode claims dan expiry sebuah token
 - `reverso format ./mystery.bin` untuk mengidentifikasi berkas
 - `reverso layout ./target.elf` dan `reverso hardening ./win32.exe` untuk struktur dan proteksi binary
 - `reverso strings ./firmware.bin --min-length 6` untuk strings terkategori
@@ -223,7 +227,7 @@ Tambahkan ke konfigurasi client kamu:
 Tool yang diekspos: `reverso_analyze`, `reverso_strings`, `reverso_entropy`,
 `reverso_format`, `reverso_layout`, `reverso_hardening`, `reverso_archive_list`,
 `reverso_js_analyze`, `reverso_scan`, `reverso_diff`, `reverso_find_bytes`,
-`reverso_wasm`, `reverso_dex` dan `reverso_hex`.
+`reverso_wasm`, `reverso_dex`, `reverso_hex`, `reverso_pcap` dan `reverso_jwt`.
 
 ---
 
@@ -294,7 +298,7 @@ node scripts/verify.mjs   # pipeline penuh (typecheck, coverage, build, audit)
 
 | Cek | Syarat |
 | --- | --- |
-| Unit dan integration test | Semua pass (129 test) |
+| Unit dan integration test | Semua pass (149 test) |
 | Line coverage | Minimal 70% |
 | Branch coverage | Minimal 60% |
 | Type check | `tsc --noEmit`, nol error |

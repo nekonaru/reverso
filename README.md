@@ -65,7 +65,7 @@ with zero runtime dependencies. Visit
 | --- | --- |
 | **Full triage report** | `reverso analyze <file>`: hashes, size, entropy, format, strings, layout, hardening, archive listing and JavaScript analysis in one report, as JSON or Markdown |
 | **Format detection** | Magic-byte detection for ELF, PE, Mach-O, ZIP (APK/IPA/JAR), WASM, DEX, PDF, PCAP and more |
-| **Binary layout** | ELF, PE and Mach-O structure: sections, program headers, imports, exports |
+| **Binary layout** | ELF, PE and Mach-O structure: sections, program headers, imports, exports, per-section entropy and the PE import hash (`imphash`) |
 | **Hardening checks** | PIE, NX stack, stack canary, RELRO and FORTIFY for ELF; ASLR, NX compat, Control Flow Guard, high entropy VA and Authenticode for PE |
 | **Entropy analysis** | Shannon entropy with high-entropy region detection for packed or encrypted content |
 | **String intelligence** | ASCII and UTF-16LE strings, categorized as URLs, IPv4, emails, paths, JWTs, AWS keys, GitHub tokens, Slack tokens, Google API keys, private keys and assigned secrets |
@@ -82,6 +82,8 @@ with zero runtime dependencies. Visit
 | **Hex pattern search** | `reverso find-bytes <file> <hex>`: `4d 5a ?? 60`-style patterns with `??` wildcards, plus a classic hex dump via `reverso hex` |
 | **WebAssembly inspector** | `reverso wasm <file>`: sections, types, imports, exports, function/table/memory/global counts and the name section |
 | **DEX inspector** | `reverso dex <file>`: header counts, checksum, and the categorized string table of Android Dalvik executables |
+| **PCAP inspector** | `reverso pcap <file>`: protocol breakdown, top talkers and top destination ports from classic PCAP captures |
+| **JWT decoder** | `reverso jwt <token>`: header, payload, expiry countdown and security warnings (the signature is never verified) |
 
 ### Website mirror
 
@@ -196,6 +198,8 @@ Use `node dist/cli.js <command>` anywhere you would use `reverso <command>`.
 - `reverso diff ./before.bin ./after.bin` to see exactly what changed between two builds
 - `reverso find-bytes ./firmware.bin "7f 45 4c 46"` to locate byte patterns with wildcards
 - `reverso hex ./mystery.bin --offset 0 --length 256` for a hex dump with offsets
+- `reverso pcap ./capture.pcap` for protocol statistics and top talkers
+- `reverso jwt ./token.txt` to decode a token's claims and expiry
 - `reverso format ./mystery.bin` to identify a file
 - `reverso layout ./target.elf` and `reverso hardening ./win32.exe` for binary structure and protections
 - `reverso strings ./firmware.bin --min-length 6` for categorized strings
@@ -224,7 +228,7 @@ Add it to your client configuration:
 Tools exposed: `reverso_analyze`, `reverso_strings`, `reverso_entropy`,
 `reverso_format`, `reverso_layout`, `reverso_hardening`, `reverso_archive_list`,
 `reverso_js_analyze`, `reverso_scan`, `reverso_diff`, `reverso_find_bytes`,
-`reverso_wasm`, `reverso_dex` and `reverso_hex`.
+`reverso_wasm`, `reverso_dex`, `reverso_hex`, `reverso_pcap` and `reverso_jwt`.
 
 ---
 
@@ -295,7 +299,7 @@ node scripts/verify.mjs   # full pipeline (typecheck, coverage, build, audit)
 
 | Check | Requirement |
 | --- | --- |
-| Unit and integration tests | All pass (129 tests) |
+| Unit and integration tests | All pass (149 tests) |
 | Line coverage | At least 70% |
 | Branch coverage | At least 60% |
 | Type check | `tsc --noEmit`, zero errors |

@@ -17,6 +17,9 @@ import { diffBuffers } from "../inspect/diff.js";
 import { parseWasm } from "../inspect/wasm.js";
 import { parseDex } from "../inspect/dex.js";
 
+import { parsePcap } from "../inspect/pcap.js";
+import { decodeJwt } from "../inspect/jwt.js";
+
 const MCP_PROTOCOL_VERSION = "2025-06-18";
 const MAX_MCP_FILE_BYTES = 64 * 1024 * 1024;
 
@@ -155,6 +158,43 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       const listing = listArchive(await readCapped(filePathArg(args)));
       if (!listing) throw new Error("Not a readable ZIP archive");
       return listing;
+    },
+  },
+  {
+    name: "reverso_pcap",
+    description: "Inspect a classic PCAP capture: version, snaplen, link type, packet count, duration, protocol breakdown, top talkers and top destination ports. pcapng is refused with guidance. Returns JSON.",
+    inputSchema: {
+      type: "object",
+      properties: { path: { type: "string" } },
+      required: ["path"],
+    },
+    handler: async (args) => parsePcap(await readCapped(filePathArg(args))),
+  },
+  {
+    name: "reverso_jwt",
+    description: "Decode a JWT (header, payload, expiry) WITHOUT verifying the signature. Accepts a token or a file path. Returns JSON including warnings.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        token: { type: "string", description: "The JWT itself, or a path to a file containing it" },
+      },
+      required: ["token"],
+    },
+    handler: async (args) => {
+      const token = args["token"];
+      if (typeof token !== "string" || token.trim().length === 0) {
+        throw new Error("Missing required string argument: token");
+      }
+      const trimmed = token.trim();
+      try {
+        const fileStat = await stat(trimmed);
+        if (fileStat.isFile()) {
+          return decodeJwt((await readCapped(trimmed)).toString());
+        }
+      } catch {
+        // Not a readable file: treat the argument as the token itself.
+      }
+      return decodeJwt(trimmed);
     },
   },
   {

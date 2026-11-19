@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.3.0
+
+Forensic depth for binaries and captures: the PE import hash, per-section entropy, and native PCAP and JWT inspection.
+
+### New features
+
+- **PE import hash.** `reverso layout` reports the PE import hash (`imphash`), computed from the import descriptor in appearance order.
+- **Per-section entropy.** ELF and PE section listings now carry per-section Shannon entropy; the report flags sections above 7.0 bits as packing candidates.
+- **PCAP inspector.** `reverso pcap <file>` parses classic PCAP captures: version, snaplen, link type, packet count, duration, protocol breakdown, top talkers and top destination ports. pcapng is detected and refused with guidance.
+- **JWT decoder.** `reverso jwt <token|file>` decodes header and payload, converts `iat`/`nbf`/`exp` to ISO dates, flags expired tokens, `alg=none`, sensitive claims and missing `exp`. The signature is never verified, by design.
+- **Two new MCP tools.** `reverso_pcap` and `reverso_jwt` (16 tools total).
+
+### Improvements
+
+- **ELF strict magic validation.** `parseElf` now throws on invalid `EI_CLASS`/`EI_DATA` instead of analyzing garbage.
+- **Layout resilience.** `reverso layout` exits 3 with a clear message when a binary cannot be parsed, instead of an unhandled error.
+
 ## v1.2.0
 
 A new mark, and a public home for the project.

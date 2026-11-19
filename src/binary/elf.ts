@@ -1,3 +1,5 @@
+import { shannonEntropy, round3 } from "../core/entropy.js";
+
 export interface ElfSection {
   name: string;
   type: number;
@@ -7,6 +9,7 @@ export interface ElfSection {
   offset: number;
   size: number;
   entrySize: number;
+  entropy: number;
 }
 
 export interface ElfProgramHeader {
@@ -135,8 +138,16 @@ const MAX_SECTIONS = 1024;
 
 export function parseElf(buf: Uint8Array): ElfInfo {
   const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
-  const bitness = buf[4] === 2 ? 64 : 32;
-  const le = buf[5] !== 2; // EI_DATA: 1 = LE, 2 = BE
+  const eiClass = buf[4]!;
+  const eiData = buf[5]!;
+  if (eiClass !== 1 && eiClass !== 2) {
+    throw new Error(`Not an ELF file: invalid EI_CLASS ${eiClass}`);
+  }
+  if (eiData !== 1 && eiData !== 2) {
+    throw new Error(`Not an ELF file: invalid EI_DATA ${eiData}`);
+  }
+  const bitness = eiClass === 2 ? 64 : 32;
+  const le = eiData === 1; // EI_DATA: 1 = LE, 2 = BE
   const osAbi = buf[7] ?? 0;
   const u16 = (o: number) => dv.getUint16(o, le);
   const u32 = (o: number) => dv.getUint32(o, le) >>> 0;
@@ -231,6 +242,13 @@ export function parseElf(buf: Uint8Array): ElfInfo {
   }
 
   const shstrtab = shstrndx < rawSections.length ? rawSections[shstrndx]! : null;
+  const sectionEntropy = (offset: number, size: number): number => {
+    if (size <= 0) return 0;
+    const start = Math.min(offset, buf.length);
+    const end = Math.min(offset + size, buf.length);
+    if (end <= start) return 0;
+    return round3(shannonEntropy(buf.subarray(start, end)));
+  };
   const sections: ElfSection[] = rawSections.map((s) => {
     const name = shstrtab && shstrtab.size > 0 && s.nameOffset < shstrtab.size
       ? readCString(shstrtab.offset + s.nameOffset, shstrtab.size - s.nameOffset)
@@ -248,6 +266,7 @@ export function parseElf(buf: Uint8Array): ElfInfo {
       offset: s.offset,
       size: s.type === SHT_NOBITS ? 0 : s.size,
       entrySize: s.entrySize,
+      entropy: s.type === SHT_NOBITS ? 0 : sectionEntropy(s.offset, s.size),
     };
   });
 
