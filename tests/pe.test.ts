@@ -25,6 +25,18 @@ function makePe(): Uint8Array {
   buf.write("MZ", 0, "ascii");
   u32(0x3c, 0x80); // e_lfanew
 
+  // Rich header in the DOS stub: DanS + 3 zero dwords + two compiler entries,
+  // all XORed with the key, then the plain "Rich" marker and the key.
+  const richKey = 0x12345678;
+  u32(0x40, (0x536e6144 ^ richKey) >>> 0); // DanS XOR key
+  for (let i = 1; i <= 3; i++) u32(0x40 + i * 4, richKey);
+  u32(0x50, (0x00091234 ^ richKey) >>> 0); // product 9, build 0x1234
+  u32(0x54, (5 ^ richKey) >>> 0); // count 5
+  u32(0x58, (0x01045678 ^ richKey) >>> 0); // product 0x0104, build 0x5678
+  u32(0x5c, (1 ^ richKey) >>> 0); // count 1
+  buf.write("Rich", 0x60, "ascii");
+  u32(0x64, richKey);
+
   // PE signature + COFF header at 0x80
   const coff = 0x80;
   u32(coff, 0x00004550);
@@ -105,7 +117,8 @@ function makePe(): Uint8Array {
 
 describe("parsePe", () => {
   it("parses sections, imports, exports and characteristics", () => {
-    const pe = parsePe(makePe());
+    const buf = makePe();
+    const pe = parsePe(buf);
     expect(pe.machineName).toBe("x86");
     expect(pe.bitness).toBe(32);
     expect(pe.isDotNet).toBe(false);
@@ -117,6 +130,33 @@ describe("parsePe", () => {
     expect(pe.hasCertificate).toBe(true);
     expect(pe.imphash).toBe(createHash("md5").update("kernel32.createfilea", "utf8").digest("hex"));
     expect(pe.sections.every((s) => s.entropy >= 0 && s.entropy <= 8)).toBe(true);
+
+    // Rich header: product 9, build 0x1234 (4660), count 5 and product 260, build 22136, count 1.
+    expect(pe.rich?.compilers).toEqual([
+      { productId: 9, buildNumber: 4660, count: 5 },
+      { productId: 260, buildNumber: 22136, count: 1 },
+    ]);
+    expect(pe.rich?.richHash).toBe(createHash("md5").update("9.4660.5,260.22136.1", "utf8").digest("hex"));
+
+    // Authenticode digest: checksum and certificate directory entry zeroed, cert table excluded.
+    const csOff = 0x98 + 64;
+    const certDirOff = 0x98 + 96 + 4 * 8;
+    const digest = (algorithm: "sha1" | "sha256"): string => {
+      const hash = createHash(algorithm);
+      hash.update(buf.subarray(0, csOff));
+      hash.update(Buffer.alloc(4));
+      hash.update(buf.subarray(csOff + 4, certDirOff));
+      hash.update(Buffer.alloc(8));
+      hash.update(buf.subarray(certDirOff + 8, 0x600));
+      hash.update(buf.subarray(0x700));
+      return hash.digest("hex");
+    };
+    expect(pe.authenticode.sha256).toBe(digest("sha256"));
+    expect(pe.authenticode.sha1).toBe(digest("sha1"));
+
+    // Overlay: the 512 bytes appended after the last section's raw data.
+    expect(pe.overlay?.size).toBe(512);
+    expect(pe.overlay?.sha256).toBe(createHash("sha256").update(buf.subarray(0x600)).digest("hex"));
     expect(pe.aslr).toBe(true);
     expect(pe.nxCompat).toBe(true);
     expect(pe.highEntropyVa).toBe(true);

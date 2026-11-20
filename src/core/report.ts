@@ -44,6 +44,8 @@ export function reportToMarkdown(report: AnalysisReport): string {
     lines.push("");
     lines.push(`- **Type:** ${elf.typeName}, machine ${elf.machineName}, ${elf.bitness}-bit ${elf.endianness}`);
     lines.push(`- **Entry:** 0x${elf.entry.toString(16)}`);
+    if (elf.buildId) lines.push(`- **GNU build-id:** \`${elf.buildId}\``);
+    if (elf.overlay) lines.push(`- **Overlay:** ${elf.overlay.size} bytes appended, SHA-256 \`${elf.overlay.sha256}\``);
     lines.push(`- **Sections:** ${elf.sections.length}, program headers: ${elf.programHeaders.length}`);
     if (elf.definedSymbols.length > 0) lines.push(`- **Defined dynamic symbols:** ${elf.definedSymbols.length}`);
     if (elf.undefinedSymbols.length > 0) lines.push(`- **Undefined dynamic symbols:** ${elf.undefinedSymbols.join(", ").slice(0, 400)}`);
@@ -62,6 +64,9 @@ export function reportToMarkdown(report: AnalysisReport): string {
     lines.push(`- **Entry point (RVA):** 0x${pe.entryPoint.toString(16)}, image base 0x${pe.imageBase.toString(16)}`);
     lines.push(`- **Sections:** ${pe.sections.map((s) => s.name).join(", ") || "none"}`);
     if (pe.imphash) lines.push(`- **ImpHash:** \`${pe.imphash}\``);
+    if (pe.rich?.richHash) lines.push(`- **Rich hash:** \`${pe.rich.richHash}\` (${pe.rich.compilers.length} compiler entry/entries)`);
+    lines.push(`- **Authenticode SHA-256 (file digest):** \`${pe.authenticode.sha256}\``);
+    if (pe.overlay) lines.push(`- **Overlay:** ${pe.overlay.size} bytes appended, SHA-256 \`${pe.overlay.sha256}\``);
     if (pe.imports.length > 0) {
       lines.push(`- **Imports:** ${pe.imports.map((i) => i.dll).join(", ")}`);
     }
@@ -80,6 +85,7 @@ export function reportToMarkdown(report: AnalysisReport): string {
     lines.push(`- **Type:** ${macho.fileTypeName}, cpu ${macho.cpuName}, ${macho.bitness}-bit`);
     if (macho.isFat) lines.push(`- **Universal slices:** ${macho.fatArchitectures.join(", ")}`);
     lines.push(`- **Segments:** ${macho.segments.map((s) => s.name).join(", ") || "none"}`);
+    if (macho.uuid) lines.push(`- **UUID:** \`${macho.uuid}\``);
     lines.push(`- **Encrypted:** ${macho.encrypted ? "yes" : "no"}, code signature: ${macho.hasCodeSignature ? "yes" : "no"}`);
     lines.push("");
   }

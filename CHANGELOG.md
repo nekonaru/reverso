@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.4.0
+
+Build provenance and appended-data forensics, validated on real Windows binaries.
+
+### New features
+
+- **PE Rich fingerprint.** The Rich header in the DOS stub is XOR-decoded into compiler entries (product, build, count) and reduced to a deterministic `richHash`. `reverso diff` reports changes to it.
+- **Authenticode file digest.** PE reports now include SHA-1 and SHA-256 file digests computed with the checksum field and certificate directory entry zeroed and the certificate table excluded.
+- **ELF build-id.** GNU build-id is extracted from `SHT_NOTE` sections when present; `reverso diff` reports changes.
+- **Mach-O UUID.** `LC_UUID` is decoded into a canonical UUID string; `reverso diff` reports changes.
+- **Overlay detection.** PE and ELF reports show the size and SHA-256 of data appended after the last section's raw data.
+
+### Improvements
+
+- **Rich marker alignment.** The Rich header scan now handles markers at any byte offset in the DOS stub, which is the common case for real Microsoft binaries.
+- **Note alignment.** ELF note fields are aligned relative to the note record rather than absolute file offsets, so oddly aligned note sections still decode.
+
 ## v1.3.0
 
 Forensic depth for binaries and captures: the PE import hash, per-section entropy, and native PCAP and JWT inspection.

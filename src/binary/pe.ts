@@ -16,6 +16,17 @@ export interface PeImport {
   functions: string[];
 }
 
+export interface PeRichInfo {
+  key: number;
+  compilers: Array<{ productId: number; buildNumber: number; count: number }>;
+  richHash: string | null;
+}
+
+export interface PeOverlay {
+  size: number;
+  sha256: string;
+}
+
 export interface PeInfo {
   bitness: 32 | 64;
   machine: number;
@@ -32,6 +43,9 @@ export interface PeInfo {
   imports: PeImport[];
   exports: string[];
   imphash: string | null;
+  authenticode: { sha1: string; sha256: string };
+  rich: PeRichInfo | null;
+  overlay: PeOverlay | null;
   hasCertificate: boolean;
   isDotNet: boolean;
   aslr: boolean;
@@ -276,6 +290,29 @@ export function parsePe(buf: Uint8Array): PeInfo {
   // Ordinal imports are encoded as "dll.ordN".
   const imphash = computeImphash(imports);
 
+  // Authenticode digest: the file hash excluding the certificate table, with
+  // the checksum field and the certificate directory entry zeroed.
+  const csOff = opt + 64;
+  const certDirOff = dataDirectoriesOffset + 4 * 8;
+  const certDirEntry = certDirOff + 8 <= buf.length ? { rva: u32(certDirOff), size: u32(certDirOff + 4) } : null;
+  const authenticode = {
+    sha1: authenticodeDigest(buf, csOff, certDirOff, certDirEntry, "sha1"),
+    sha256: authenticodeDigest(buf, csOff, certDirOff, certDirEntry, "sha256"),
+  };
+
+  // Rich header (compile-toolchain fingerprint from the DOS stub).
+  const rich = parseRichHeader(buf, peOffset, u32);
+
+  // Overlay: bytes appended after the last section's raw data.
+  let lastRawEnd = 0;
+  for (const section of sections) {
+    const end = section.pointerToRawData + section.sizeOfRawData;
+    if (end > lastRawEnd) lastRawEnd = end;
+  }
+  const overlay = lastRawEnd > 0 && lastRawEnd < buf.length
+    ? { size: buf.length - lastRawEnd, sha256: createHash("sha256").update(buf.subarray(lastRawEnd)).digest("hex") }
+    : null;
+
   return {
     bitness,
     machine,
@@ -292,6 +329,9 @@ export function parsePe(buf: Uint8Array): PeInfo {
     imports,
     exports,
     imphash,
+    authenticode,
+    rich,
+    overlay,
     hasCertificate: !isRomImage && certificateDir !== null && certificateDir.size > 0,
     isDotNet: !isRomImage && clrDir !== null && clrDir.rva !== 0,
     aslr: (dllCharacteristicsRaw & 0x0040) !== 0,
@@ -308,6 +348,78 @@ function pickFlags(value: number, table: Array<[number, string]>): string[] {
     if ((value & bit) !== 0) out.push(name);
   }
   return out;
+}
+
+/** Hash of the file with the checksum and certificate directory entry zeroed. */
+function authenticodeDigest(
+  buf: Uint8Array,
+  csOff: number,
+  certDirOff: number,
+  certDirEntry: { rva: number; size: number } | null,
+  algorithm: "sha1" | "sha256",
+): string {
+  const zero4 = new Uint8Array(4);
+  const zero8 = new Uint8Array(8);
+  const hash = createHash(algorithm);
+  if (!certDirEntry || certDirEntry.size === 0 || certDirEntry.rva + certDirEntry.size > buf.length) {
+    hash.update(buf.subarray(0, csOff));
+    hash.update(zero4);
+    hash.update(buf.subarray(csOff + 4));
+    return hash.digest("hex");
+  }
+  const certOff = certDirEntry.rva;
+  hash.update(buf.subarray(0, csOff));
+  hash.update(zero4);
+  hash.update(buf.subarray(csOff + 4, certDirOff));
+  hash.update(zero8);
+  hash.update(buf.subarray(certDirOff + 8, certOff));
+  hash.update(buf.subarray(certOff + certDirEntry.size));
+  return hash.digest("hex");
+}
+
+/** Decodes the Rich header from the DOS stub. Returns null when absent or malformed. */
+function parseRichHeader(
+  buf: Uint8Array,
+  peOffset: number,
+  u32: (offset: number) => number,
+): PeRichInfo | null {
+  let richOffset = -1;
+  for (let offset = 0; offset + 8 <= peOffset; offset++) {
+    if (buf[offset] === 0x52 && buf[offset + 1] === 0x69 && buf[offset + 2] === 0x63 && buf[offset + 3] === 0x68) {
+      richOffset = offset;
+      break;
+    }
+  }
+  if (richOffset === -1) return null;
+  const key = u32(richOffset + 4);
+
+  let dansOffset = -1;
+  for (let offset = richOffset - 4; offset >= 0; offset -= 4) {
+    if (((u32(offset) ^ key) >>> 0) === 0x536e6144) {
+      dansOffset = offset;
+      break;
+    }
+  }
+  if (dansOffset === -1) return null;
+
+  // Three padding dwords after DanS must decode to zero.
+  for (let i = 1; i <= 3; i++) {
+    if (((u32(dansOffset + i * 4) ^ key) >>> 0) !== 0) return null;
+  }
+
+  const compilers: Array<{ productId: number; buildNumber: number; count: number }> = [];
+  let pos = dansOffset + 16;
+  while (pos + 8 <= richOffset) {
+    const compId = (u32(pos) ^ key) >>> 0;
+    const count = (u32(pos + 4) ^ key) >>> 0;
+    compilers.push({ productId: compId >>> 16, buildNumber: compId & 0xffff, count });
+    pos += 8;
+  }
+  if (compilers.length === 0) return null;
+  const richHash = createHash("md5")
+    .update(compilers.map((c) => `${c.productId}.${c.buildNumber}.${c.count}`).join(","), "utf8")
+    .digest("hex");
+  return { key, compilers, richHash };
 }
 
 function computeImphash(imports: PeImport[]): string | null {

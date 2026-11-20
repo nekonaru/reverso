@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.4.0
+
+Provenansi build dan forensik data yang ditambahkan, divalidasi pada binary Windows nyata.
+
+### Fitur baru
+
+- **Rich fingerprint PE.** Rich header di DOS stub di-XOR kembali menjadi entri compiler (produk, build, count) dan diringkas menjadi `richHash` deterministik. `reverso diff` melaporkan perubahannya.
+- **Digest file Authenticode.** Laporan PE kini memuat digest SHA-1 dan SHA-256 dengan field checksum dan entri certificate directory dinolkan serta tabel sertifikat dikecualikan.
+- **ELF build-id.** GNU build-id diekstrak dari section `SHT_NOTE` saat ada; `reverso diff` melaporkan perubahannya.
+- **UUID Mach-O.** `LC_UUID` didekode menjadi string UUID kanonik; `reverso diff` melaporkan perubahannya.
+- **Deteksi overlay.** Laporan PE dan ELF menampilkan ukuran dan SHA-256 data yang ditambahkan setelah raw data section terakhir.
+
+### Peningkatan
+
+- **Keselarasan marker Rich.** Pemindaian Rich header kini menangani marker di offset byte mana pun di DOS stub, kasus umum pada binary Microsoft nyata.
+- **Alignment note.** Field note ELF disejajarkan relatif terhadap record note, bukan offset absolut, sehingga section note dengan alignment aneh tetap terbaca.
+
 ## v1.3.0
 
 Kedalaman forensik untuk binary dan capture: PE import hash, entropy per section, serta inspeksi PCAP dan JWT native.
