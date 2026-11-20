@@ -2,15 +2,15 @@ import { describe, it, expect } from "vitest";
 import { parseMachO } from "../src/binary/macho.js";
 import { hardeningReport } from "../src/binary/hardening.js";
 
-/** Builds a minimal 64-bit Mach-O with one LC_SEGMENT_64, LC_MAIN and LC_CODE_SIGNATURE. */
+/** Builds a minimal 64-bit Mach-O with one LC_SEGMENT_64, LC_MAIN, LC_CODE_SIGNATURE and LC_UUID. */
 function makeMacho64(): Uint8Array {
   const buf = Buffer.alloc(0x400);
   buf.writeUInt32LE(0xfeedfacf, 0); // magic (bytes cf fa ed fe)
   buf.writeUInt32LE(0x0100000c, 4); // CPU_TYPE_ARM64
   buf.writeUInt32LE(0, 8); // cpusubtype
   buf.writeUInt32LE(2, 12); // filetype: execute
-  buf.writeUInt32LE(3, 16); // ncmds
-  buf.writeUInt32LE(0x48 + 0x18 + 0x10, 20); // sizeofcmds
+  buf.writeUInt32LE(4, 16); // ncmds
+  buf.writeUInt32LE(0x48 + 0x18 + 0x10 + 0x18, 20); // sizeofcmds
   buf.writeUInt32LE(0x00218085, 24); // flags (PIE | dead-strippable | twolevel etc.)
   buf.writeUInt32LE(0, 28); // reserved
 
@@ -41,6 +41,12 @@ function makeMacho64(): Uint8Array {
   buf.writeUInt32LE(16, offset + 4);
   buf.writeUInt32LE(0x2000, offset + 8); // dataoff
   buf.writeUInt32LE(0x100, offset + 12); // datasize
+  offset += 16;
+
+  // LC_UUID: 24 bytes
+  buf.writeUInt32LE(0x1b, offset);
+  buf.writeUInt32LE(24, offset + 4);
+  Buffer.from("00112233445566778899aabbccddeeff", "hex").copy(buf, offset + 8);
 
   return new Uint8Array(buf);
 }
@@ -57,6 +63,7 @@ describe("parseMachO", () => {
     expect(macho.hasCodeSignature).toBe(true);
     expect(macho.encrypted).toBe(false);
     expect(macho.flags).toContain("pie");
+    expect(macho.uuid).toBe("00112233-4455-6677-8899-aabbccddeeff");
   });
 
   it("parses fat universal binaries", () => {

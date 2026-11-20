@@ -21,6 +21,7 @@ export interface MachOInfo {
   encrypted: boolean;
   hasCodeSignature: boolean;
   hasEntryPoint: boolean;
+  uuid: string | null;
 }
 
 const CPU_TYPE_NAMES: Record<number, string> = {
@@ -52,6 +53,7 @@ const LC_MAIN = 0x80000028;
 const LC_ENCRYPTION_INFO = 0x21;
 const LC_ENCRYPTION_INFO_64 = 0x2c;
 const LC_CODE_SIGNATURE = 0x1d;
+const LC_UUID = 0x1b;
 const LC_SEGMENT = 0x1;
 const LC_SEGMENT_64 = 0x19;
 
@@ -89,6 +91,7 @@ export function parseMachO(buf: Uint8Array): MachOInfo {
       encrypted: false,
       hasCodeSignature: false,
       hasEntryPoint: false,
+      uuid: null,
     };
   }
 
@@ -111,6 +114,7 @@ export function parseMachO(buf: Uint8Array): MachOInfo {
   let encrypted = false;
   let hasCodeSignature = false;
   let hasEntryPoint = false;
+  let uuid: string | null = null;
   for (let i = 0; i < Math.min(ncmds, 256); i++) {
     if (offset + 8 > buf.length) break;
     const cmd = u32(offset);
@@ -143,6 +147,11 @@ export function parseMachO(buf: Uint8Array): MachOInfo {
       if (cryptidOffset + 4 <= buf.length) encrypted = u32(cryptidOffset) !== 0;
     } else if (cmd === LC_CODE_SIGNATURE) {
       hasCodeSignature = true;
+    } else if (cmd === LC_UUID) {
+      if (offset + 24 <= buf.length) {
+        const bytes = [...buf.subarray(offset + 8, offset + 24)];
+        uuid = formatUuid(bytes);
+      }
     } else if (cmd === LC_MAIN) {
       hasEntryPoint = true;
     }
@@ -169,6 +178,7 @@ export function parseMachO(buf: Uint8Array): MachOInfo {
     encrypted,
     hasCodeSignature,
     hasEntryPoint,
+    uuid,
   };
 }
 
@@ -180,4 +190,15 @@ function readFixedString(buf: Uint8Array, offset: number, length: number): strin
     s += b >= 0x20 && b <= 0x7e ? String.fromCharCode(b) : ".";
   }
   return s;
+}
+
+function formatUuid(bytes: number[]): string {
+  const hex = bytes.map((b) => b.toString(16).padStart(2, "0"));
+  return [
+    hex.slice(0, 4).join(""),
+    hex.slice(4, 6).join(""),
+    hex.slice(6, 8).join(""),
+    hex.slice(8, 10).join(""),
+    hex.slice(10, 16).join(""),
+  ].join("-");
 }

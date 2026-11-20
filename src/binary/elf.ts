@@ -1,4 +1,5 @@
 import { shannonEntropy, round3 } from "../core/entropy.js";
+import { createHash } from "node:crypto";
 
 export interface ElfSection {
   name: string;
@@ -27,6 +28,11 @@ export interface ElfSymbol {
   defined: boolean;
 }
 
+export interface ElfOverlay {
+  size: number;
+  sha256: string;
+}
+
 export interface ElfInfo {
   bitness: 32 | 64;
   endianness: "LE" | "BE";
@@ -40,6 +46,8 @@ export interface ElfInfo {
   programHeaders: ElfProgramHeader[];
   definedSymbols: string[];
   undefinedSymbols: string[];
+  buildId: string | null;
+  overlay: ElfOverlay | null;
   stripped: boolean;
   pie: boolean;
   nxStack: boolean;
@@ -53,6 +61,7 @@ const SHN_UNDEF = 0;
 const SHN_XINDEX = 0xffff;
 const SHT_SYMTAB = 2;
 const SHT_DYNAMIC = 6;
+const SHT_NOTE = 7;
 const SHT_DYNSYM = 11;
 const SHT_NOBITS = 8;
 
@@ -353,6 +362,19 @@ export function parseElf(buf: Uint8Array): ElfInfo {
     return !stack.flags.includes("X");
   })();
 
+  const buildId = parseBuildId(buf, rawSections, le);
+
+  // Overlay: bytes appended after the last section's raw data.
+  let lastRawEnd = 0;
+  for (const s of rawSections) {
+    if (s.type === SHT_NOBITS) continue;
+    const end = s.offset + s.size;
+    if (end > lastRawEnd) lastRawEnd = end;
+  }
+  const overlay = lastRawEnd > 0 && lastRawEnd < buf.length
+    ? { size: buf.length - lastRawEnd, sha256: createHash("sha256").update(buf.subarray(lastRawEnd)).digest("hex") }
+    : null;
+
   const fortified = [...definedSymbols, ...undefinedSymbols].filter((n) => n.endsWith("_chk")).length;
 
   return {
@@ -368,6 +390,8 @@ export function parseElf(buf: Uint8Array): ElfInfo {
     programHeaders,
     definedSymbols: [...definedSymbols].slice(0, MAX_SYMBOLS),
     undefinedSymbols: [...undefinedSymbols].slice(0, MAX_SYMBOLS),
+    buildId,
+    overlay,
     stripped: !hasSymtab,
     pie: type === 3,
     nxStack,
@@ -376,4 +400,53 @@ export function parseElf(buf: Uint8Array): ElfInfo {
     stackCanary: undefinedSymbols.has("__stack_chk_fail") || definedSymbols.has("__stack_chk_fail"),
     fortifiedFunctions: fortified,
   };
+}
+
+interface RawNoteSection {
+  type: number;
+  offset: number;
+  size: number;
+}
+
+function parseBuildId(buf: Uint8Array, rawSections: RawNoteSection[], le: boolean): string | null {
+  const u32 = (o: number) => {
+    const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+    return dv.getUint32(o, le) >>> 0;
+  };
+  const align4 = (n: number) => (n + 3) & ~3;
+
+  for (const section of rawSections) {
+    if (section.type !== SHT_NOTE) continue;
+    if (section.size === 0 || section.offset + section.size > buf.length) continue;
+    let pos = section.offset;
+    const end = section.offset + section.size;
+
+    while (pos + 12 <= end) {
+      const namesz = u32(pos);
+      const descsz = u32(pos + 4);
+      const ntype = u32(pos + 8);
+      if (namesz > 1024 || descsz > 4096) break;
+
+      const nameStart = pos + 12;
+      const nameEnd = nameStart + namesz;
+      // Note field alignment is relative to the start of the note record.
+      const descStart = pos + 12 + align4(namesz);
+      const descEnd = descStart + descsz;
+      if (nameEnd > descStart || descEnd > end) break;
+
+      let name = "";
+      for (let i = nameStart; i < nameEnd; i++) {
+        const b = buf[i]!;
+        if (b === 0) continue;
+        name += b >= 0x20 && b <= 0x7e ? String.fromCharCode(b) : ".";
+      }
+      if (name === "GNU" && ntype === 3) {
+        return [...buf.subarray(descStart, descEnd)]
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+      }
+      pos = descStart + align4(descsz);
+    }
+  }
+  return null;
 }

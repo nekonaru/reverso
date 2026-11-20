@@ -1,6 +1,6 @@
 /** Test helpers to build synthetic binary buffers. */
 
-export function makeElf64(options: { pie?: boolean; withCanaryImport?: boolean; withCode?: boolean } = {}): Uint8Array {
+export function makeElf64(options: { pie?: boolean; withCanaryImport?: boolean; withCode?: boolean; buildId?: string } = {}): Uint8Array {
   const pie = options.pie ?? false;
   const withCanary = options.withCanaryImport ?? true;
 
@@ -10,7 +10,9 @@ export function makeElf64(options: { pie?: boolean; withCanaryImport?: boolean; 
     encoder.encode("__stack_chk_fail\0"),
     encoder.encode("libc.so.6\0"),
   ]);
-  const shstrtab = encoder.encode("\0.dynsym\0.dynstr\0.shstrtab\0");
+  const shstrtab = options.buildId
+    ? encoder.encode("\0.dynsym\0.dynstr\0.shstrtab\0.note\0")
+    : encoder.encode("\0.dynsym\0.dynstr\0.shstrtab\0");
   const shstrDynsym = 1;
   const shstrDynstr = 9;
   const shstrShstrtab = 17;
@@ -20,14 +22,25 @@ export function makeElf64(options: { pie?: boolean; withCanaryImport?: boolean; 
 
   const ehsize = 64;
   const shoff = ehsize;
-  const shnum = 4;
+  const shnum = options.buildId ? 5 : 4;
   const shentsize = 64;
   const dataOffset = shoff + shnum * shentsize;
 
   const dynsymOffset = dataOffset;
   const dynstrOffset = dynsymOffset + dynsymSize;
   const shstrOffset = dynstrOffset + dynstr.length;
-  const totalSize = shstrOffset + shstrtab.length;
+  const noteOffset = shstrOffset + shstrtab.length;
+  let buildIdBytes = Buffer.alloc(0);
+  if (options.buildId) {
+    const desc = Buffer.from(options.buildId, "hex");
+    buildIdBytes = Buffer.alloc(16 + desc.length);
+    buildIdBytes.writeUInt32LE(4, 0); // namesz
+    buildIdBytes.writeUInt32LE(desc.length, 4); // descsz
+    buildIdBytes.writeUInt32LE(3, 8); // NT_GNU_BUILD_ID
+    Buffer.from("GNU\0", "ascii").copy(buildIdBytes, 12);
+    desc.copy(buildIdBytes, 16);
+  }
+  const totalSize = options.buildId ? noteOffset + buildIdBytes.length : noteOffset;
 
   const buf = Buffer.alloc(totalSize);
   // e_ident
@@ -70,6 +83,7 @@ export function makeElf64(options: { pie?: boolean; withCanaryImport?: boolean; 
   writeShdr(1, shstrDynsym, 11, 0x2n, 0x4000, dynsymOffset, dynsymSize, 2, 1, 24); // DYNSYM
   writeShdr(2, shstrDynstr, 3, 0x2n, 0x5000, dynstrOffset, dynstr.length, 0, 0, 0); // STRTAB
   writeShdr(3, shstrShstrtab, 3, 0n, 0, shstrOffset, shstrtab.length, 0, 0, 0); // SHSTRTAB
+  if (options.buildId) writeShdr(4, 27, 7, 0x2n, 0, noteOffset, buildIdBytes.length, 0, 0, 0); // SHT_NOTE
 
   // One undefined symbol: __stack_chk_fail
   const symO = dynsymOffset;
@@ -82,6 +96,7 @@ export function makeElf64(options: { pie?: boolean; withCanaryImport?: boolean; 
 
   dynstr.copy(buf, dynstrOffset);
   Buffer.from(shstrtab).copy(buf, shstrOffset);
+  buildIdBytes.copy(buf, noteOffset);
 
   return new Uint8Array(buf);
 }

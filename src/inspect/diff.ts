@@ -153,6 +153,9 @@ function diffTraits(
       differences.push(`ELF machine changed (${ra.layout.elf.machineName} -> ${rb.layout.elf.machineName})`);
     }
     if (ra.layout.elf.entry !== rb.layout.elf.entry) differences.push("ELF entry point changed");
+    if (ra.layout.elf.buildId !== rb.layout.elf.buildId) {
+      differences.push(`ELF build-id changed (${ra.layout.elf.buildId ?? "none"} -> ${rb.layout.elf.buildId ?? "none"})`);
+    }
   }
 
   if (ra.layout?.pe && rb.layout?.pe) {
@@ -175,6 +178,9 @@ function diffTraits(
     if (ra.layout.pe.imphash !== rb.layout.pe.imphash) {
       differences.push(`PE imphash changed (${ra.layout.pe.imphash ?? "none"} -> ${rb.layout.pe.imphash ?? "none"})`);
     }
+    if (ra.layout.pe.rich?.richHash !== rb.layout.pe.rich?.richHash) {
+      differences.push(`PE Rich hash changed (${ra.layout.pe.rich?.richHash ?? "none"} -> ${rb.layout.pe.rich?.richHash ?? "none"})`);
+    }
   }
 
   if (ra.layout?.macho && rb.layout?.macho) {
@@ -186,6 +192,9 @@ function diffTraits(
     ];
     for (const [name, before, after] of traits) {
       if (before !== after) differences.push(`Mach-O ${name}: ${before} -> ${after}`);
+    }
+    if (ra.layout.macho.uuid !== rb.layout.macho.uuid) {
+      differences.push(`Mach-O UUID changed (${ra.layout.macho.uuid ?? "none"} -> ${rb.layout.macho.uuid ?? "none"})`);
     }
   }
 }

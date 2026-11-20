@@ -22,6 +22,17 @@ describe("parseElf", () => {
     expect(elf.typeName).toBe("DYN");
     expect(elf.pie).toBe(true);
   });
+
+  it("extracts the GNU build-id from a note section", () => {
+    const buildId = "0123456789abcdef0123456789abcdef01234567";
+    const elf = parseElf(makeElf64({ buildId }));
+    expect(elf.buildId).toBe(buildId);
+    expect(elf.sections.map((s) => s.name)).toContain(".note");
+  });
+
+  it("returns null build-id when no note section exists", () => {
+    expect(parseElf(makeElf64()).buildId).toBeNull();
+  });
 });
 
 describe("hardeningReport (ELF)", () => {
