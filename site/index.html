@@ -26,6 +26,7 @@
     <nav class="site-nav" aria-label="Primary">
       <ul>
         <li><a href="#features">Features</a></li>
+        <li><a href="#online">Try online</a></li>
         <li><a href="#install">Install</a></li>
         <li><a href="#mcp">MCP</a></li>
         <li><a href="#faq">FAQ</a></li>
@@ -147,6 +148,53 @@ reverso doctor</code></pre>
         <li>reverso_scan</li><li>reverso_diff</li><li>reverso_find_bytes</li><li>reverso_hex</li>
         <li>reverso_wasm</li><li>reverso_dex</li><li>reverso_pcap</li><li>reverso_jwt</li>
       </ul>
+    </section>
+
+    <section id="online" class="section" aria-labelledby="online-heading">
+      <h2 id="online-heading">Try Reverso online</h2>
+      <p class="section-lede">Pick a file and an analyzer. Everything runs in a Web Worker inside your browser: your file is never uploaded anywhere.</p>
+      <div class="online-panel">
+        <div class="online-controls">
+          <label for="tool-select">Analysis</label>
+          <select id="tool-select">
+            <option value="analyze">Full triage report</option>
+            <option value="format">Format detection</option>
+            <option value="entropy">Entropy</option>
+            <option value="strings">Strings with categories</option>
+            <option value="layout">Binary layout</option>
+            <option value="hardening">Hardening checks</option>
+            <option value="archive">ZIP / APK / IPA / JAR listing</option>
+            <option value="js">JavaScript bundle</option>
+            <option value="wasm">WebAssembly module</option>
+            <option value="dex">Android DEX</option>
+            <option value="pcap">PCAP capture</option>
+            <option value="jwt">JWT token</option>
+            <option value="find-bytes">Find hex bytes</option>
+            <option value="hex">Hex dump</option>
+            <option value="diff">Compare two files</option>
+          </select>
+          <label for="file-input">File</label>
+          <input id="file-input" type="file">
+          <div id="second-file-wrap" hidden>
+            <label for="file2-input">Second file (for compare)</label>
+            <input id="file2-input" type="file">
+          </div>
+          <div id="pattern-wrap" hidden>
+            <label for="pattern-input">Hex pattern, for example <code>4d 5a ?? 60</code></label>
+            <input id="pattern-input" type="text" autocomplete="off" spellcheck="false">
+          </div>
+          <button id="run-button" class="button button-gold" type="button">Analyze file</button>
+          <p id="online-status" class="online-status" role="status" aria-live="polite">Ready. Maximum file size: 64 MB.</p>
+        </div>
+        <div class="online-result">
+          <pre id="result-region" role="region" aria-labelledby="result-caption" tabindex="0"><code id="result-code">Results will appear here.</code></pre>
+          <p id="result-caption" class="section-note">JSON output, identical to the CLI engines.</p>
+          <div class="cta-row">
+            <button id="copy-result" class="button button-ghost" type="button">Copy result</button>
+            <button id="download-result" class="button button-ghost" type="button">Download report</button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section id="faq" class="section" aria-labelledby="faq-heading">

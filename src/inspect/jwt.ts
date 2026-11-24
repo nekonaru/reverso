@@ -100,7 +100,8 @@ function base64UrlDecode(segment: string): Uint8Array {
     throw new Error("Not a JWT: invalid base64url characters");
   }
   try {
-    return new Uint8Array(Buffer.from(normalized, "base64"));
+    const binary = atob(normalized);
+    return Uint8Array.from(binary, (char) => char.charCodeAt(0));
   } catch {
     throw new Error("Not a JWT: invalid base64url segment");
   }

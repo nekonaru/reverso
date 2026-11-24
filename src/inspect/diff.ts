@@ -1,6 +1,6 @@
 /** Binary diffing: compare two files at the structural level. */
 
-import { analyzeBuffer } from "../core/analyze.js";
+import { analyzeBuffer } from "../core/analyze-buffer.js";
 
 export interface FormatScopedLayout {
   addedSections: string[];

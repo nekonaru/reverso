@@ -33,6 +33,7 @@ try {
   run("typecheck", nodeBin, [tsc, "-p", "tsconfig.json", "--noEmit"]);
   run("tests (with coverage)", nodeBin, [vitest, "run", "--coverage"]);
   run("build", nodeBin, [tsc, "-p", "tsconfig.json"]);
+  run("build:web", nodeBin, [join(root, "scripts", "build-web.mjs")]);
   if (!fast) {
     // Audit production dependencies. The dev-only vitest chain currently carries
     // GHSA-fc5q-39xc-vjpf (picomatch ReDoS) with no patched release; it never
