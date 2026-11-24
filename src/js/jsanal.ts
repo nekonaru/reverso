@@ -62,8 +62,10 @@ const OBFUSCATION_INDICATORS: Array<{ name: string; pattern: RegExp; weight: num
   { name: "string-array rotation", pattern: /\(\s*["'][A-Za-z0-9+/=]{20,}["']\s*\)\s*;/g, weight: 10 },
 ];
 
+const utf8Encoder = new TextEncoder();
+
 export function analyzeJavaScript(source: string): JsAnalysis {
-  const bytes = Buffer.byteLength(source, "utf8");
+  const bytes = utf8Encoder.encode(source).length;
   const lines = source.length === 0 ? 0 : source.split("\n").length;
   const avgLineLength = lines > 0 ? source.length / lines : 0;
   const maxLineLength = source.split("\n").reduce((max, line) => Math.max(max, line.length), 0);

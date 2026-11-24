@@ -56,6 +56,36 @@ async function readCapped(path: string): Promise<Uint8Array> {
   return readFile(path);
 }
 
+/**
+ * Reads an analysis input from either a local `path` or inline base64 `content`.
+ * Remote MCP transports have no filesystem, so base64 is the universal form.
+ */
+async function readInput(args: Record<string, unknown>): Promise<Uint8Array> {
+  const content = args["content"];
+  if (typeof content === "string" && content.length > 0) {
+    const buf = Buffer.from(content, "base64");
+    if (buf.length > MAX_MCP_FILE_BYTES) {
+      throw new Error(`File too large for MCP analysis (${buf.length} bytes, limit ${MAX_MCP_FILE_BYTES})`);
+    }
+    return new Uint8Array(buf);
+  }
+  return readCapped(filePathArg(args));
+}
+
+async function readNamedInput(args: Record<string, unknown>, name: string): Promise<Uint8Array> {
+  const content = args[`content${name.charAt(0).toUpperCase()}${name.slice(1)}`];
+  if (typeof content === "string" && content.length > 0) {
+    const buf = Buffer.from(content, "base64");
+    if (buf.length > MAX_MCP_FILE_BYTES) {
+      throw new Error(`File too large for MCP analysis (${buf.length} bytes, limit ${MAX_MCP_FILE_BYTES})`);
+    }
+    return new Uint8Array(buf);
+  }
+  const path = args[name];
+  if (typeof path !== "string" || !path) throw new Error(`Missing required string argument: ${name}`);
+  return readCapped(path);
+}
+
 export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "reverso_analyze",
@@ -65,7 +95,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       properties: { path: { type: "string", description: "Absolute path of the file to analyze" } },
       required: ["path"],
     },
-    handler: async (args) => analyzeBuffer(await readCapped(filePathArg(args)), filePathArg(args)),
+    handler: async (args) => analyzeBuffer(await readInput(args), typeof args["label"] === "string" ? args["label"] : typeof args["path"] === "string" ? args["path"] : "input"),
   },
   {
     name: "reverso_strings",
@@ -80,7 +110,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     handler: async (args) => {
       const minLength = typeof args["minLength"] === "number" ? args["minLength"] : 4;
-      const strings = extractStrings(await readCapped(filePathArg(args)), { minLength });
+      const strings = extractStrings(await readInput(args), { minLength });
       return {
         total: strings.length,
         categories: summarizeCategories(strings),
@@ -97,7 +127,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["path"],
     },
     handler: async (args) => {
-      const buf = await readCapped(filePathArg(args));
+      const buf = await readInput(args);
       return {
         entropy: round3(shannonEntropy(buf)),
         highEntropyRegions: highEntropyWindows(buf),
@@ -112,7 +142,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       properties: { path: { type: "string" } },
       required: ["path"],
     },
-    handler: async (args) => detectFormat(await readCapped(filePathArg(args))),
+    handler: async (args) => detectFormat(await readInput(args)),
   },
   {
     name: "reverso_layout",
@@ -123,8 +153,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["path"],
     },
     handler: async (args) => {
-      const path = filePathArg(args);
-      const buf = await readCapped(path);
+      const buf = await readInput(args);
       const format = detectFormat(buf).format;
       if (format === "elf32" || format === "elf64") return { format, elf: parseElf(buf) };
       if (format === "pe") return { format, pe: parsePe(buf) };
@@ -141,7 +170,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["path"],
     },
     handler: async (args) => {
-      const buf = await readCapped(filePathArg(args));
+      const buf = await readInput(args);
       const format = detectFormat(buf).format;
       return hardeningReport(buf, format);
     },
@@ -155,7 +184,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["path"],
     },
     handler: async (args) => {
-      const listing = listArchive(await readCapped(filePathArg(args)));
+      const listing = listArchive(await readInput(args));
       if (!listing) throw new Error("Not a readable ZIP archive");
       return listing;
     },
@@ -168,7 +197,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       properties: { path: { type: "string" } },
       required: ["path"],
     },
-    handler: async (args) => parsePcap(await readCapped(filePathArg(args))),
+    handler: async (args) => parsePcap(await readInput(args)),
   },
   {
     name: "reverso_jwt",
@@ -215,7 +244,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       if (typeof pattern !== "string" || pattern.trim().length === 0) {
         throw new Error("Missing required string argument: pattern");
       }
-      return findPattern(await readCapped(filePathArg(args)), pattern, maxResults);
+      return findPattern(await readInput(args), pattern, maxResults);
     },
   },
   {
@@ -226,7 +255,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       properties: { path: { type: "string" } },
       required: ["path"],
     },
-    handler: async (args) => parseWasm(await readCapped(filePathArg(args))),
+    handler: async (args) => parseWasm(await readInput(args)),
   },
   {
     name: "reverso_dex",
@@ -236,7 +265,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       properties: { path: { type: "string" } },
       required: ["path"],
     },
-    handler: async (args) => parseDex(await readCapped(filePathArg(args))),
+    handler: async (args) => parseDex(await readInput(args)),
   },
   {
     name: "reverso_scan",
@@ -268,8 +297,18 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     handler: async (args) => {
       const a = args["a"];
       const b = args["b"];
+      const contentA = args["contentA"];
+      const contentB = args["contentB"];
+      if (typeof contentA === "string" && typeof contentB === "string") {
+        return diffBuffers(
+          await readNamedInput(args, "a"),
+          await readNamedInput(args, "b"),
+          typeof a === "string" ? a : "a",
+          typeof b === "string" ? b : "b",
+        );
+      }
       if (typeof a !== "string" || typeof b !== "string" || !a || !b) {
-        throw new Error("Missing required string arguments: a, b");
+        throw new Error("Provide contentA and contentB (base64) or two local paths a and b");
       }
       return diffBuffers(await readCapped(a), await readCapped(b), a, b);
     },
@@ -288,7 +327,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["path"],
     },
     handler: async (args) => {
-      const buf = await readCapped(filePathArg(args));
+      const buf = await readInput(args);
       const offset = typeof args["offset"] === "number" ? Math.max(0, Math.floor(args["offset"])) : 0;
       const length = typeof args["length"] === "number" ? Math.min(Math.max(Math.floor(args["length"]), 1), 4096) : 256;
       const width = typeof args["width"] === "number" ? Math.min(Math.max(Math.floor(args["width"]), 1), 32) : 16;
@@ -307,7 +346,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     handler: async (args) => {
       if (typeof args["path"] === "string" && args["path"]) {
-        return analyzeJavaScript((await readCapped(args["path"])).toString());
+        return analyzeJavaScript((await readInput(args)).toString());
       }
       if (typeof args["source"] === "string") {
         if (args["source"].length > 32 * 1024 * 1024) throw new Error("Inline source too large");
@@ -317,6 +356,29 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
   },
 ];
+
+// Remote transports have no shared filesystem. Every file-based tool also
+// accepts inline base64 content, advertised in the tool schema.
+for (const tool of TOOL_DEFINITIONS) {
+  const schema = tool.inputSchema as {
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
+  schema.properties = {
+    ...(schema.properties ?? {}),
+    content: { type: "string", description: "Base64-encoded file content (remote use instead of a path)" },
+  };
+  if (Array.isArray(schema.required)) {
+    schema.required = schema.required.filter((name) => name !== "path" && name !== "a" && name !== "b");
+  }
+}
+const diffSchema = TOOL_DEFINITIONS.find((tool) => tool.name === "reverso_diff")?.inputSchema as
+  | { properties: Record<string, unknown> }
+  | undefined;
+if (diffSchema) {
+  diffSchema.properties["contentA"] = { type: "string", description: "Base64 content of the baseline file" };
+  diffSchema.properties["contentB"] = { type: "string", description: "Base64 content of the candidate file" };
+}
 
 function toolList(): unknown {
   return {

@@ -1,0 +1,205 @@
+/** Zero-dependency HTTP service: public analysis API, remote MCP and static site. */
+import { createServer, type IncomingMessage, type ServerResponse, type Server } from "node:http";
+import { readFile, stat } from "node:fs/promises";
+import { extname, join, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+import { realpathSync } from "node:fs";
+import { VERSION } from "../version.js";
+import { runBrowserTool, type BrowserTool } from "../browser/index.js";
+import { handleMessage, type JsonRpcMessage } from "../mcp/server.js";
+
+const MAX_BODY_BYTES = Number(process.env["REVERSO_MAX_BODY_BYTES"] ?? 8 * 1024 * 1024);
+const SITE_DIR = resolve(fileURLToPath(new URL("../../site/", import.meta.url)));
+const VALID_TOOLS = new Set<BrowserTool>([
+  "analyze", "format", "entropy", "strings", "layout", "hardening", "archive", "js",
+  "wasm", "dex", "pcap", "jwt", "find-bytes", "hex", "diff",
+]);
+
+const CONTENT_TYPES: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".ico": "image/x-icon",
+  ".webmanifest": "application/manifest+json",
+};
+
+function json(res: ServerResponse, status: number, value: unknown): void {
+  const body = JSON.stringify(value, (_key, item) => (typeof item === "bigint" ? item.toString() : item));
+  res.writeHead(status, {
+    "content-type": "application/json; charset=utf-8",
+    "content-length": Buffer.byteLength(body),
+    ...corsHeaders(),
+  });
+  res.end(body);
+}
+
+function corsHeaders(): Record<string, string> {
+  return {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": "content-type, mcp-protocol-version, mcp-session-id",
+  };
+}
+
+async function readBody(req: IncomingMessage): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of req) {
+    const piece = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array);
+    total += piece.length;
+    if (total > MAX_BODY_BYTES) {
+      const error = new Error("Body too large");
+      (error as Error & { status?: number }).status = 413;
+      throw error;
+    }
+    chunks.push(piece);
+  }
+  return Buffer.concat(chunks);
+}
+
+async function serveStatic(pathname: string, res: ServerResponse): Promise<void> {
+  const relative = decodeURIComponent(pathname === "/" ? "/index.html" : pathname).replace(/^\/+/, "");
+  const filePath = resolve(SITE_DIR, relative);
+  const rel = relativePath(SITE_DIR, filePath);
+  if (rel.startsWith("..") || rel.includes(`..${sep}`)) {
+    json(res, 403, { error: "Forbidden" });
+    return;
+  }
+  try {
+    const fileStat = await stat(filePath);
+    if (!fileStat.isFile()) throw new Error("Not a file");
+    const body = await readFile(filePath);
+    res.writeHead(200, {
+      "content-type": CONTENT_TYPES[extname(filePath).toLowerCase()] ?? "application/octet-stream",
+      "content-length": body.length,
+      "cache-control": "public, max-age=300",
+      ...corsHeaders(),
+    });
+    res.end(body);
+  } catch {
+    json(res, 404, { error: "Not found" });
+  }
+}
+
+function relativePath(from: string, to: string): string {
+  const a = from.split(/[\\/]/).filter(Boolean);
+  const b = to.split(/[\\/]/).filter(Boolean);
+  while (a.length > 0 && b.length > 0 && a[0] === b[0]) {
+    a.shift();
+    b.shift();
+  }
+  return [...a.map(() => ".."), ...b].join("/");
+}
+
+async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, corsHeaders());
+    res.end();
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/health") {
+    json(res, 200, { status: "ok", version: VERSION, service: "reverso-online" });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/analyze") {
+    const tool = url.searchParams.get("tool") as BrowserTool;
+    if (!VALID_TOOLS.has(tool)) {
+      json(res, 400, { error: `Unknown or missing tool. Choose one of: ${[...VALID_TOOLS].join(", ")}` });
+      return;
+    }
+    try {
+      const body = await readBody(req);
+      const result = runBrowserTool({
+        tool,
+        bytes: new Uint8Array(body),
+        label: url.searchParams.get("label") ?? "upload.bin",
+        arg: url.searchParams.get("arg") ?? undefined,
+      });
+      json(res, 200, { tool, bytes: body.length, result });
+    } catch (error) {
+      const status = (error as Error & { status?: number }).status ?? 400;
+      json(res, status, { error: (error as Error).message });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/mcp") {
+    try {
+      const body = await readBody(req);
+      const message = JSON.parse(body.toString("utf8")) as JsonRpcMessage;
+      const response = await handleMessage(message);
+      if (!response) {
+        res.writeHead(202, corsHeaders());
+        res.end();
+        return;
+      }
+      const acceptsSse = (req.headers["accept"] ?? "").includes("text/event-stream");
+      if (acceptsSse) {
+        res.writeHead(200, {
+          "content-type": "text/event-stream; charset=utf-8",
+          "cache-control": "no-cache",
+          "mcp-protocol-version": "2025-06-18",
+          ...corsHeaders(),
+        });
+        res.end(`event: message\ndata: ${JSON.stringify(response)}\n\n`);
+        return;
+      }
+      res.writeHead(200, {
+        "content-type": "application/json; charset=utf-8",
+        "mcp-protocol-version": "2025-06-18",
+        ...corsHeaders(),
+      });
+      res.end(JSON.stringify(response));
+    } catch (error) {
+      const status = (error as Error & { status?: number }).status ?? 400;
+      json(res, status, { error: (error as Error).message });
+    }
+    return;
+  }
+
+  if (req.method === "GET") {
+    await serveStatic(url.pathname, res);
+    return;
+  }
+
+  json(res, 405, { error: "Method not allowed" });
+}
+
+export function createHttpServer(): Server {
+  const server = createServer((req, res) => {
+    void handleRequest(req, res).catch((error) => {
+      json(res, 500, { error: (error as Error).message });
+    });
+  });
+  server.requestTimeout = 60_000;
+  return server;
+}
+
+/** Starts the HTTP service. Used by `npm start` and the container. */
+export function startServer(): void {
+  const port = Number(process.env["PORT"] ?? 3000);
+  const host = process.env["HOST"] ?? "0.0.0.0";
+  const server = createHttpServer();
+  server.listen(port, host, () => {
+    console.log(`Reverso online service v${VERSION} listening on http://${host}:${port}`);
+  });
+}
+
+function safeReal(path: string): string {
+  try {
+    return realpathSync(path);
+  } catch {
+    return resolve(path);
+  }
+}
+
+const invokedAsScript = process.argv[1] !== undefined
+  && safeReal(fileURLToPath(import.meta.url)) === safeReal(process.argv[1]);
+if (invokedAsScript) startServer();

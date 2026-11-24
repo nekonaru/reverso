@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: reverso-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build && npm run build:web
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: HOST
+        value: "0.0.0.0"
+      - key: REVERSO_MAX_BODY_BYTES
+        value: "8388608"

@@ -51,7 +51,9 @@ dikenal, menginventarisasi bundle JavaScript, dan mirror website untuk
 analisis offline, dari satu perintah atau satu MCP server. Semuanya berjalan
 lokal: tanpa Ghidra, Hopper, IDA, Python atau license server untuk analyzer
 bwaan, dan paketnya dikirim dengan nol dependensi runtime. Kunjungi
-[project site](https://nekonaru.github.io/reverso/) untuk ikhtisar singkat.
+[project site](https://nekonaru.github.io/reverso/) untuk ikhtisar singkat. Untuk
+analyzer di browser, HTTP API dan MCP jarak jauh, lihat
+[Menggunakan Reverso secara online](docs/online.md).
 
 > _"Analisis apa pun, tanpa instalasi apa pun."_
 
@@ -208,6 +210,12 @@ Gunakan `node dist/cli.js <perintah>` di mana pun kamu memakai `reverso <perinta
 - `reverso site https://example.com --out ./mirror` untuk mirror website offline
 - `reverso capabilities` untuk daftar semua analyzer dan MCP tool
 
+### Pakai secara online
+
+- Buka bagian "Try Reverso online" di situs proyek untuk menganalisis berkas sepenuhnya di browser, tanpa upload
+- Jalankan `npm start` untuk melayani situs yang sama, API analisis di `POST /api/analyze` dan endpoint MCP stateless di `POST /mcp`
+- Deploy `Dockerfile` atau blueprint `render.yaml` yang disertakan di host Node gratis mana pun; lihat [Menggunakan Reverso secara online](docs/online.md)
+
 ### Pakai Reverso dari MCP client
 
 `reverso mcp` berbicara Model Context Protocol lewat stdio (protokol `2025-06-18`).
@@ -242,15 +250,21 @@ reverso/
 │   ├── js/           # analisis bundle JavaScript
 │   ├── web/          # mirror website (same origin, penjaga alamat privat)
 │   ├── mcp/          # MCP stdio server
+│   ├── browser/      # entry worker browser dan shim hash WebCrypto
+│   ├── server/       # HTTP API, host statis dan MCP jarak jauh
 │   ├── doctor.ts     # self-check lingkungan
 │   ├── index.ts      # API publik
 │   └── cli.ts        # dispatcher perintah (lapisan tipis di atas engine)
 ├── tests/            # unit dan integration test (vitest)
+├── site/             # situs proyek plus bundle analyzer browser
 ├── docs/
 │   ├── specs/        # spesifikasi yang bisa diuji (done criteria)
+│   ├── online.md     # panduan analyzer browser, HTTP API dan MCP jarak jauh
 │   └── brand.md      # penggunaan logo dan warna
 ├── assets/logo/      # file logo final (mark, lockup, ikon)
 ├── scripts/verify.mjs# pipeline verifikasi lokal
+├── Dockerfile        # container untuk deploy hosted
+├── render.yaml       # blueprint Render tier gratis
 ├── README.md         # versi Inggris
 └── README.id.md      # file ini
 ```
@@ -298,7 +312,7 @@ node scripts/verify.mjs   # pipeline penuh (typecheck, coverage, build, audit)
 
 | Cek | Syarat |
 | --- | --- |
-| Unit dan integration test | Semua pass (151 test) |
+| Unit dan integration test | Semua pass (158 test) |
 | Line coverage | Minimal 70% |
 | Branch coverage | Minimal 60% |
 | Type check | `tsc --noEmit`, nol error |

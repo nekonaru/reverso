@@ -52,6 +52,8 @@ or one MCP server. Everything runs locally: no Ghidra, Hopper, IDA, Python or
 license server is required for the built-in analyzers, and the package ships
 with zero runtime dependencies. Visit
 [the project site](https://nekonaru.github.io/reverso/) for a quick overview.
+For the in-browser analyzer, HTTP API and remote MCP service, see
+[Using Reverso online](docs/online.md).
 
 > _"Analyze anything, install nothing."_
 
@@ -209,6 +211,12 @@ Use `node dist/cli.js <command>` anywhere you would use `reverso <command>`.
 - `reverso site https://example.com --out ./mirror` to mirror a site offline
 - `reverso capabilities` to list every analyzer and MCP tool
 
+### Use it online
+
+- Open the "Try Reverso online" section on the project website to analyze a file entirely in your browser, with no upload
+- Run `npm start` to serve the same site, a binary analysis API at `POST /api/analyze` and a stateless MCP endpoint at `POST /mcp`
+- Deploy the included `Dockerfile` or `render.yaml` blueprint on any free Node host; see [Using Reverso online](docs/online.md)
+
 ### Use Reverso from an MCP client
 
 `reverso mcp` speaks Model Context Protocol over stdio (protocol `2025-06-18`).
@@ -243,15 +251,21 @@ reverso/
 │   ├── js/           # JavaScript bundle analysis
 │   ├── web/          # website mirror (same origin, private-address guard)
 │   ├── mcp/          # MCP stdio server
+│   ├── browser/      # browser worker entry and WebCrypto hash shim
+│   ├── server/       # HTTP API, static host and remote MCP
 │   ├── doctor.ts     # environment self-check
 │   ├── index.ts      # public API
 │   └── cli.ts        # command dispatcher (thin layer over the engines)
 ├── tests/            # unit and integration tests (vitest)
+├── site/             # project website plus in-browser analyzer bundles
 ├── docs/
 │   ├── specs/        # testable specification (done criteria)
+│   ├── online.md     # browser analyzer, HTTP API and remote MCP guide
 │   └── brand.md      # logo usage and colors
 ├── assets/logo/      # final logo files (mark, lockups, icons)
 ├── scripts/verify.mjs# local verification pipeline
+├── Dockerfile        # container for hosted deployment
+├── render.yaml       # free-tier Render blueprint
 ├── README.md         # this file (English)
 └── README.id.md      # Bahasa Indonesia
 ```
@@ -299,7 +313,7 @@ node scripts/verify.mjs   # full pipeline (typecheck, coverage, build, audit)
 
 | Check | Requirement |
 | --- | --- |
-| Unit and integration tests | All pass (151 tests) |
+| Unit and integration tests | All pass (158 tests) |
 | Line coverage | At least 70% |
 | Branch coverage | At least 60% |
 | Type check | `tsc --noEmit`, zero errors |

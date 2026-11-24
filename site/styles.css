@@ -264,6 +264,67 @@ main { max-width: var(--maxw); margin: 0 auto; }
   padding: 0.3rem 0.6rem;
 }
 
+/* Online analyzer */
+.online-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.online-controls,
+.online-result {
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+.online-controls { display: flex; flex-direction: column; gap: 0.5rem; }
+.online-controls label { color: var(--muted); font-size: 0.9rem; margin-top: 0.4rem; }
+.online-controls select,
+.online-controls input[type="file"],
+.online-controls input[type="text"] {
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--ink-3);
+  color: var(--paper);
+  font: inherit;
+  font-size: 0.9rem;
+}
+.online-controls input[type="file"]::file-selector-button {
+  background: var(--ink);
+  color: var(--gold);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  margin-right: 0.6rem;
+  cursor: pointer;
+}
+.online-controls button { margin-top: 0.9rem; }
+.online-status { color: var(--muted); font-size: 0.85rem; margin: 0.75rem 0 0; }
+.online-result pre {
+  margin: 0;
+  padding: 0.9rem;
+  min-height: 280px;
+  max-height: 520px;
+  overflow: auto;
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--paper);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.online-result .cta-row { margin-top: 0.9rem; }
+.online-result .button { padding: 0.5rem 0.9rem; font-size: 0.9rem; }
+[hidden] { display: none !important; }
+@media (max-width: 900px) {
+  .online-panel { grid-template-columns: 1fr; }
+}
+
 /* FAQ */
 #faq details {
   border: 1px solid var(--line);
