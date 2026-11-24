@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.5.0
+
+Reverso becomes usable online: in the browser with no install, or through a small hosted API and MCP service.
+
+### New features
+
+- **In-browser analyzer.** The project website now has a "Try Reverso online" section with 15 analyzers, a Web Worker, a 64 MB per-file cap and copy/download controls. Files stay in the browser and are never uploaded.
+- **HTTP API.** `POST /api/analyze?tool=<name>` accepts a raw file body and returns the same JSON as the CLI. `GET /health` supports health checks. CORS is enabled and the request body is capped at 8 MB by default.
+- **Remote MCP.** `POST /mcp` answers stateless JSON-RPC over JSON or server-sent events. Every file tool accepts inline base64 `content`; `reverso_diff` accepts `contentA` and `contentB`.
+- **Hosting kit.** `Dockerfile`, `render.yaml` free-tier blueprint and `npm start` run the website, API and remote MCP in one Node process. See `docs/online.md`.
+
+### Improvements
+
+- **Shared engines.** The analysis engine is split into a platform-neutral core, so the CLI, MCP, browser and HTTP API all produce identical results without duplicated logic.
+- **Build pipeline.** `npm run build:web` bundles the browser analyzer, and `npm run verify` now checks it on every push.
+
 ## v1.4.0
 
 Build provenance and appended-data forensics, validated on real Windows binaries.

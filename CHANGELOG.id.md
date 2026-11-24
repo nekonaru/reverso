@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.5.0
+
+Reverso bisa dipakai secara online: di browser tanpa instalasi, atau lewat API dan MCP server yang di-host.
+
+### Fitur baru
+
+- **Analyzer di browser.** Situs proyek kini punya bagian "Try Reverso online" dengan 15 analyzer, Web Worker, batas 64 MB per file serta tombol salin dan unduh. File tetap di browser dan tidak pernah di-upload.
+- **HTTP API.** `POST /api/analyze?tool=<nama>` menerima file mentah dan mengembalikan JSON yang sama seperti CLI. `GET /health` untuk health check. CORS aktif dan body dibatasi 8 MB secara default.
+- **MCP jarak jauh.** `POST /mcp` menjawab JSON-RPC stateless lewat JSON atau server-sent events. Setiap tool file menerima `content` base64; `reverso_diff` menerima `contentA` dan `contentB`.
+- **Paket hosting.** `Dockerfile`, blueprint gratis `render.yaml` dan `npm start` menjalankan situs, API dan MCP jarak jauh dalam satu proses Node. Lihat `docs/online.md`.
+
+### Peningkatan
+
+- **Engine bersama.** Inti analisis dipisah menjadi modul platform-neutral, sehingga CLI, MCP, browser dan HTTP API menghasilkan hasil identik tanpa logika ganda.
+- **Pipeline build.** `npm run build:web` mem-bundle analyzer browser, dan `npm run verify` kini memeriksanya di setiap push.
+
 ## v1.4.0
 
 Provenansi build dan forensik data yang ditambahkan, divalidasi pada binary Windows nyata.
