@@ -26,11 +26,40 @@ export interface DexInfo {
     truncated: boolean;
     categories: DexStringCategory[];
   };
+  classes: string[];
 }
 
 const MAX_STRING_IDS = 5000;
 const MAX_STRING_BYTES = 4096;
+const MAX_CLASSES = 300;
 const ULEB_MAX_SHIFT = 28;
+
+/** Resolves class_defs through type_ids and string_ids to readable descriptors. */
+function readClassNames(buf: Uint8Array, strings: Array<{ offset: number; value: string }>, dv: DataView): string[] {
+  const typeIdsSize = dv.getUint32(64, true) >>> 0;
+  const typeIdsOff = dv.getUint32(68, true) >>> 0;
+  const classDefsSize = dv.getUint32(96, true) >>> 0;
+  const classDefsOff = dv.getUint32(100, true) >>> 0;
+
+  if (typeIdsOff + typeIdsSize * 4 > buf.length || classDefsOff + classDefsSize * 32 > buf.length) return [];
+
+  const typeIds: string[] = [];
+  for (let i = 0; i < Math.min(typeIdsSize, strings.length); i++) {
+    const stringIndex = dv.getUint32(typeIdsOff + i * 4, true) >>> 0;
+    typeIds.push(strings[stringIndex]?.value ?? "");
+  }
+
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < Math.min(classDefsSize, MAX_CLASSES); i++) {
+    const classIndex = dv.getUint32(classDefsOff + i * 32, true) >>> 0;
+    const descriptor = typeIds[classIndex];
+    if (!descriptor || seen.has(descriptor)) continue;
+    seen.add(descriptor);
+    out.push(descriptor);
+  }
+  return out;
+}
 
 export function parseDex(buf: Uint8Array): DexInfo {
   if (buf.length < 0x70) throw new Error("Not a DEX file: too small");
@@ -64,6 +93,7 @@ export function parseDex(buf: Uint8Array): DexInfo {
 
   const strings = readStringTable(buf, stringIdsSize, stringIdsOff);
   const categorized = categorizeStrings(strings);
+  const classes = readClassNames(buf, strings, dv);
 
   return {
     version: String.fromCharCode(buf[4]!, buf[5]!, buf[6]!),
@@ -85,6 +115,7 @@ export function parseDex(buf: Uint8Array): DexInfo {
       truncated: stringIdsSize > strings.length,
       categories: categorized,
     },
+    classes,
   };
 }
 

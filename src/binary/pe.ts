@@ -41,8 +41,11 @@ export interface PeInfo {
   dllCharacteristics: string[];
   sections: PeSection[];
   imports: PeImport[];
+  delayImports: PeImport[];
   exports: string[];
   imphash: string | null;
+  pdbPath: string | null;
+  debugDirectories: number;
   authenticode: { sha1: string; sha256: string };
   rich: PeRichInfo | null;
   overlay: PeOverlay | null;
@@ -261,6 +264,83 @@ export function parsePe(buf: Uint8Array): PeInfo {
     }
   }
 
+  // Delay-load import directory (data directory index 13). Descriptors are
+  // 32 bytes; the first dword says whether the stored values are RVAs (1) or
+  // virtual addresses (0), which is still common in older linkers.
+  const delayImports: PeImport[] = [];
+  const delayDir = dataDirectory(13);
+  if (delayDir && delayDir.rva !== 0) {
+    const ordinalFlag = isPePlus ? 0x8000000000000000n : 0x80000000n;
+    const thunkSize = isPePlus ? 8 : 4;
+    for (let i = 0; i < MAX_DLLS; i++) {
+      const descOffset = rvaToOffset(delayDir.rva + i * 32);
+      if (descOffset === null || descOffset + 32 > buf.length) break;
+      const attrs = u32(descOffset);
+      const toRva = (value: number): number => (attrs & 1) !== 0 ? value : value - imageBase;
+      const nameValue = u32(descOffset + 4);
+      const intValue = u32(descOffset + 12);
+      if (nameValue === 0 && intValue === 0) break;
+      const nameRva = toRva(nameValue);
+      const dll = (nameRva >= 0 ? readCStringAtRva(nameRva) : null) ?? `unknown-delay-${i}.dll`;
+      const functions: string[] = [];
+      const thunkRva = toRva(intValue);
+      const thunkOffset = thunkRva >= 0 ? rvaToOffset(thunkRva) : null;
+      if (thunkOffset !== null) {
+        for (let j = 0; j < MAX_IMPORTS_PER_DLL; j++) {
+          const o = thunkOffset + j * thunkSize;
+          if (o + thunkSize > buf.length) break;
+          const raw = isPePlus ? dv.getBigUint64(o, true)! : BigInt(u32(o));
+          if (raw === 0n) break;
+          const value = (attrs & 1) !== 0 ? raw : BigInt(Math.max(0, Number(raw) - imageBase));
+          if ((value & ordinalFlag) !== 0n) {
+            functions.push(`ordinal-${Number(value & 0xffffn)}`);
+            continue;
+          }
+          const hintNameOffset = rvaToOffset(Number(value & 0x7fffffffn) >>> 0);
+          if (hintNameOffset === null) continue;
+          let s = "";
+          for (let k = hintNameOffset + 2; k < Math.min(hintNameOffset + 130, buf.length); k++) {
+            const b = buf[k]!;
+            if (b === 0) break;
+            if (b < 0x20 || b > 0x7e) break;
+            s += String.fromCharCode(b);
+          }
+          if (s) functions.push(s);
+        }
+      }
+      delayImports.push({ dll, functions });
+    }
+  }
+
+  // Debug directory: extract the CodeView PDB path when present.
+  const debugDir = dataDirectory(6);
+  let pdbPath: string | null = null;
+  let debugDirectories = 0;
+  if (debugDir && debugDir.rva !== 0) {
+    const debugOffset = rvaToOffset(debugDir.rva);
+    if (debugOffset !== null) {
+      for (let i = 0; i < 64; i++) {
+        const o = debugOffset + i * 28;
+        if (o + 28 > buf.length) break;
+        const type = u32(o + 12);
+        const pointer = u32(o + 24);
+        if (type === 0 && u32(o) === 0 && pointer === 0) break;
+        debugDirectories += 1;
+        if (type === 2 && pdbPath === null && pointer > 0 && pointer + 24 < buf.length) {
+          if (buf[pointer] === 0x52 && buf[pointer + 1] === 0x53 && buf[pointer + 2] === 0x44 && buf[pointer + 3] === 0x53) {
+            let path = "";
+            for (let k = pointer + 24; k < Math.min(pointer + 24 + 512, buf.length); k++) {
+              const b = buf[k]!;
+              if (b === 0) break;
+              path += b >= 0x20 && b <= 0x7e ? String.fromCharCode(b) : ".";
+            }
+            if (path) pdbPath = path;
+          }
+        }
+      }
+    }
+  }
+
   // Export directory (data directory index 0).
   const exports: string[] = [];
   const exportDir = dataDirectory(0);
@@ -327,8 +407,11 @@ export function parsePe(buf: Uint8Array): PeInfo {
     dllCharacteristics: pickFlags(dllCharacteristicsRaw, DLL_CHARACTERISTICS),
     sections,
     imports,
+    delayImports,
     exports,
     imphash,
+    pdbPath,
+    debugDirectories,
     authenticode,
     rich,
     overlay,

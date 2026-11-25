@@ -66,15 +66,36 @@ describe("parseMachO", () => {
     expect(macho.uuid).toBe("00112233-4455-6677-8899-aabbccddeeff");
   });
 
-  it("parses fat universal binaries", () => {
-    const buf = Buffer.alloc(8 + 20 * 2);
+  it("parses fat universal binaries and every slice", () => {
+    const slice = makeMacho64();
+    const headerLength = 8 + 20 * 2;
+    const buf = Buffer.alloc(headerLength + slice.length * 2);
     buf.writeUInt32BE(0xcafebabe, 0);
     buf.writeUInt32BE(2, 4); // nfat_arch
-    buf.writeUInt32BE(7, 8); // CPU_TYPE_X86
-    buf.writeUInt32BE(16777228, 28); // CPU_TYPE_ARM64 in second slice
+    const cpus = [7, 16777228];
+    let offset = headerLength;
+    for (let i = 0; i < 2; i++) {
+      const entry = 8 + i * 20;
+      buf.writeUInt32BE(cpus[i]!, entry);
+      buf.writeUInt32BE(3, entry + 4); // cpusubtype
+      buf.writeUInt32BE(offset, entry + 8);
+      buf.writeUInt32BE(slice.length, entry + 12);
+      buf.writeUInt32BE(12, entry + 16); // align
+      Buffer.from(slice).copy(buf, offset);
+      offset += slice.length;
+    }
     const macho = parseMachO(new Uint8Array(buf));
     expect(macho.isFat).toBe(true);
-    expect(macho.fatArchitectures).toEqual([7, 16777228]);
+    expect(macho.fatArchitectures).toEqual(cpus);
+    expect(macho.fatSlices).toHaveLength(2);
+    expect(macho.fatSlices[0]).toMatchObject({
+      cpuType: 7,
+      bitness: 64,
+      fileType: "execute",
+      segments: ["__TEXT"],
+      uuid: "00112233-4455-6677-8899-aabbccddeeff",
+      error: null,
+    });
   });
 });
 

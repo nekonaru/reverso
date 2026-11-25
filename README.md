@@ -67,7 +67,7 @@ For the in-browser analyzer, HTTP API and remote MCP service, see
 | --- | --- |
 | **Full triage report** | `reverso analyze <file>`: hashes, size, entropy, format, strings, layout, hardening, archive listing and JavaScript analysis in one report, as JSON or Markdown |
 | **Format detection** | Magic-byte detection for ELF, PE, Mach-O, ZIP (APK/IPA/JAR), WASM, DEX, PDF, PCAP and more |
-| **Binary layout** | ELF, PE and Mach-O structure: sections, program headers, imports, exports, per-section entropy, PE import hash, Rich fingerprint, Authenticode file digest, ELF build-id, Mach-O UUID and appended overlays |
+| **Binary layout** | ELF, PE and Mach-O structure: sections, program headers, imports, exports, shared libraries (ELF), delay imports and PDB path (PE), universal Mach-O slices, per-section entropy and build fingerprints |
 | **Hardening checks** | PIE, NX stack, stack canary, RELRO and FORTIFY for ELF; ASLR, NX compat, Control Flow Guard, high entropy VA and Authenticode for PE |
 | **Entropy analysis** | Shannon entropy with high-entropy region detection for packed or encrypted content |
 | **String intelligence** | ASCII and UTF-16LE strings, categorized as URLs, IPv4, emails, paths, JWTs, AWS keys, GitHub tokens, Slack tokens, Google API keys, private keys and assigned secrets |
@@ -313,7 +313,7 @@ node scripts/verify.mjs   # full pipeline (typecheck, coverage, build, audit)
 
 | Check | Requirement |
 | --- | --- |
-| Unit and integration tests | All pass (158 tests) |
+| Unit and integration tests | All pass (161 tests) |
 | Line coverage | At least 70% |
 | Branch coverage | At least 60% |
 | Type check | `tsc --noEmit`, zero errors |

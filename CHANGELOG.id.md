@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.6.0
+
+Pemeriksaan native lebih dalam untuk dependensi dinamis, path build dan binary universal. Diaudit terhadap binary Windows nyata.
+
+### Fitur baru
+
+- **Dependensi ELF.** `reverso layout` mengurai `DT_NEEDED`, `DT_RPATH` dan `DT_RUNPATH` lewat `DT_STRTAB`, memetakan alamat virtual ke offset file melalui segmen `PT_LOAD`.
+- **Delay import PE.** Directory delay-load diurai menjadi struktur impor yang sama seperti impor biasa (bentuk descriptor RVA dan VA).
+- **Path PDB.** Entri debug CodeView diurai untuk mendapatkan path PDB mesin build dan jumlah directory debug.
+- **Kelas DEX.** `reverso dex` menyelesaikan `class_defs` lewat `type_ids` menjadi deskriptor kelas yang terbaca.
+- **Slice Mach-O universal.** Binary fat kini melaporkan CPU, bitness, tipe file, segment dan UUID per slice, dengan pengecekan batas dan error per slice.
+
+### Perbaikan bug
+
+- **Stride header binary fat.** Header Mach-O fat 64-bit memakai entri arsitektur 32 byte, bukan 20 byte. Parser lama salah membaca CPU dan offset slice pada file fat64; kini memakai layout yang benar untuk kedua varian.
+
+### Peningkatan
+
+- Laporan Markdown menampilkan library yang dibutuhkan, RPATH/RUNPATH, delay import, path PDB, daftar kelas DEX dan detail slice Mach-O.
+
 ## v1.5.0
 
 Reverso bisa dipakai secara online: di browser tanpa instalasi, atau lewat API dan MCP server yang di-host.

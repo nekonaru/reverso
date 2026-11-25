@@ -22,6 +22,17 @@ export interface MachOInfo {
   hasCodeSignature: boolean;
   hasEntryPoint: boolean;
   uuid: string | null;
+  fatSlices: Array<{
+    cpuType: number;
+    cpuSubtype: number;
+    offset: number;
+    size: number;
+    bitness: 32 | 64 | null;
+    fileType: string | null;
+    segments: string[];
+    uuid: string | null;
+    error: string | null;
+  }>;
 }
 
 const CPU_TYPE_NAMES: Record<number, string> = {
@@ -61,21 +72,44 @@ const FAT_MAGIC = 0xcafebabe;
 const FAT_CIGAM = 0xbebafeca;
 const FAT_MAGIC_64 = 0xcafebabf;
 
-export function parseMachO(buf: Uint8Array): MachOInfo {
+export function parseMachO(buf: Uint8Array, depth = 0): MachOInfo {
   const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
   const b0 = buf[0]!, b1 = buf[1]!, b2 = buf[2]!, b3 = buf[3]!;
 
   if (b0 === 0xca && b1 === 0xfe && b2 === 0xba && (b3 === 0xbe || b3 === 0xc0)) {
-    // Fat binary: report the architecture list, parsing the first slice would
-    // require knowing which architecture the caller wants.
-    const is64 = b3 === 0xc0;
+    // Fat binary: read every architecture slice and parse the thin Mach-O it holds.
+    const isFat64 = b3 === 0xc0;
     const nfat = dv.getUint32(4, false);
-    const archs: number[] = [];
-    const sliceSize = is64 ? 32 : 20;
+    const entrySize = isFat64 ? 32 : 20;
+    const fatSlices: MachOInfo["fatSlices"] = [];
     for (let i = 0; i < Math.min(nfat, 32); i++) {
-      const o = 8 + i * sliceSize;
-      if (o + 4 > buf.length) break;
-      archs.push(dv.getInt32(o, false));
+      const o = 8 + i * entrySize;
+      if (o + entrySize > buf.length) break;
+      const cpuType = dv.getInt32(o, false);
+      const cpuSubtype = dv.getInt32(o + 4, false);
+      const offset = isFat64 ? Number(dv.getBigUint64(o + 8, false)) : dv.getUint32(o + 8, false);
+      const size = isFat64 ? Number(dv.getBigUint64(o + 16, false)) : dv.getUint32(o + 12, false);
+      const base = { cpuType, cpuSubtype, offset, size };
+      if (offset >= buf.length || size === 0) {
+        fatSlices.push({ ...base, bitness: null, fileType: null, segments: [], uuid: null, error: "slice out of bounds" });
+        continue;
+      }
+      const slice = buf.subarray(offset, Math.min(offset + size, buf.length));
+      try {
+        const info = depth >= 1
+          ? { bitness: 64 as const, fileTypeName: "nested-fat", segments: [], uuid: null }
+          : parseMachO(slice, depth + 1);
+        fatSlices.push({
+          ...base,
+          bitness: info.bitness,
+          fileType: info.fileTypeName,
+          segments: info.segments.map((s) => s.name),
+          uuid: info.uuid,
+          error: null,
+        });
+      } catch (error) {
+        fatSlices.push({ ...base, bitness: null, fileType: null, segments: [], uuid: null, error: (error as Error).message });
+      }
     }
     return {
       bitness: 64,
@@ -86,7 +120,8 @@ export function parseMachO(buf: Uint8Array): MachOInfo {
       fileTypeName: "fat",
       flags: [],
       isFat: true,
-      fatArchitectures: archs,
+      fatArchitectures: fatSlices.map((s) => s.cpuType),
+      fatSlices,
       segments: [],
       encrypted: false,
       hasCodeSignature: false,
@@ -179,6 +214,7 @@ export function parseMachO(buf: Uint8Array): MachOInfo {
     hasCodeSignature,
     hasEntryPoint,
     uuid,
+    fatSlices: [],
   };
 }
 

@@ -48,6 +48,9 @@ export interface ElfInfo {
   undefinedSymbols: string[];
   buildId: string | null;
   overlay: ElfOverlay | null;
+  needed: string[];
+  rpath: string | null;
+  runpath: string | null;
   stripped: boolean;
   pie: boolean;
   nxStack: boolean;
@@ -69,6 +72,11 @@ const PT_GNU_STACK = 0x6474e551;
 const PT_GNU_RELRO = 0x6474e552;
 
 const DT_BIND_NOW = 24;
+const DT_NEEDED = 1;
+const DT_STRTAB = 5;
+const DT_RPATH = 15;
+const DT_RUNPATH = 29;
+const PT_LOAD = 1;
 const DT_FLAGS = 30;
 const DT_FLAGS_1 = 0x6ffffffb;
 const DF_BIND_NOW = 0x8;
@@ -339,8 +347,12 @@ export function parseElf(buf: Uint8Array): ElfInfo {
 
   const hasSymtab = rawSections.some((s) => s.type === SHT_SYMTAB);
 
-  // Hardening-relevant dynamic entries.
+  // Hardening-relevant dynamic entries, plus shared-library dependencies.
   let bindNow = false;
+  let strtabAddr: number | null = null;
+  const neededOffsets: number[] = [];
+  let rpathOffset: number | null = null;
+  let runpathOffset: number | null = null;
   const dynamic = rawSections.find((s) => s.type === SHT_DYNAMIC);
   if (dynamic) {
     const tagSize = bitness === 64 ? 16 : 8;
@@ -353,8 +365,38 @@ export function parseElf(buf: Uint8Array): ElfInfo {
       if (tag === DT_BIND_NOW) bindNow = true;
       if (tag === DT_FLAGS && (value & DF_BIND_NOW) !== 0) bindNow = true;
       if (tag === DT_FLAGS_1 && (value & DF_1_NOW) !== 0) bindNow = true;
+      if (tag === DT_STRTAB) strtabAddr = value;
+      if (tag === DT_NEEDED && neededOffsets.length < 256) neededOffsets.push(value);
+      if (tag === DT_RPATH) rpathOffset = value;
+      if (tag === DT_RUNPATH) runpathOffset = value;
     }
   }
+
+  const vaddrToOffset = (address: number): number | null => {
+    for (const header of programHeaders) {
+      if (header.type !== PT_LOAD) continue;
+      if (address >= header.address && address < header.address + header.fileSize) {
+        return header.offset + (address - header.address);
+      }
+    }
+    const section = rawSections.find((s) => s.address === address);
+    return section ? section.offset : null;
+  };
+
+  const dynamicString = (nameOffset: number | null): string | null => {
+    if (nameOffset === null || strtabAddr === null) return null;
+    const strtabOffset = vaddrToOffset(strtabAddr);
+    if (strtabOffset === null) return null;
+    const start = strtabOffset + nameOffset;
+    if (start >= buf.length) return null;
+    return readCString(start, buf.length - start) || null;
+  };
+
+  const needed = neededOffsets
+    .map((offset) => dynamicString(offset))
+    .filter((name): name is string => name !== null);
+  const rpath = dynamicString(rpathOffset);
+  const runpath = dynamicString(runpathOffset);
 
   const nxStack = (() => {
     const stack = programHeaders.find((p) => p.type === PT_GNU_STACK);
@@ -392,6 +434,9 @@ export function parseElf(buf: Uint8Array): ElfInfo {
     undefinedSymbols: [...undefinedSymbols].slice(0, MAX_SYMBOLS),
     buildId,
     overlay,
+    needed,
+    rpath,
+    runpath,
     stripped: !hasSymtab,
     pie: type === 3,
     nxStack,

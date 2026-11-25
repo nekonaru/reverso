@@ -34,7 +34,10 @@ export function makeDex(): Uint8Array {
     return [...leb(value.length), ...raw, 0x00];
   });
   const dataBytes = stringDataItems.reduce((sum, item) => sum + item.length, 0);
-  const fileSize = dataOff + dataBytes;
+  const typeIdsOff = dataOff + dataBytes;
+  const classDefsOff = typeIdsOff + 4 * 4;
+  const extraBytes = 4 * 4 + 3 * 32;
+  const fileSize = classDefsOff + 3 * 32;
 
   const buf = Buffer.alloc(fileSize);
   buf.write("dex\n035\0", 0, 8, "ascii");
@@ -49,7 +52,7 @@ export function makeDex(): Uint8Array {
   buf.writeUInt32LE(stringIdsSize, 56);
   buf.writeUInt32LE(stringIdsOff, 60);
   buf.writeUInt32LE(4, 64); // type_ids_size
-  buf.writeUInt32LE(0, 68); // type_ids_off (unused by the inspector)
+  buf.writeUInt32LE(typeIdsOff, 68);
   buf.writeUInt32LE(6, 72); // proto_ids_size
   buf.writeUInt32LE(0, 76);
   buf.writeUInt32LE(7, 80); // field_ids_size
@@ -57,8 +60,8 @@ export function makeDex(): Uint8Array {
   buf.writeUInt32LE(27, 88); // method_ids_size
   buf.writeUInt32LE(0, 92);
   buf.writeUInt32LE(3, 96); // class_defs_size
-  buf.writeUInt32LE(0, 100);
-  buf.writeUInt32LE(dataBytes, 104);
+  buf.writeUInt32LE(classDefsOff, 100);
+  buf.writeUInt32LE(dataBytes + extraBytes, 104);
   buf.writeUInt32LE(dataOff, 108);
 
   let offset = dataOff;
@@ -71,6 +74,10 @@ export function makeDex(): Uint8Array {
     Buffer.from(item).copy(buf, writeAt);
     writeAt += item.length;
   }
+
+  // type_ids: string indices [0, 2, 3, 4]; class_defs: first three type ids.
+  [0, 2, 3, 4].forEach((stringIndex, i) => buf.writeUInt32LE(stringIndex, typeIdsOff + i * 4));
+  for (let i = 0; i < 3; i++) buf.writeUInt32LE(i, classDefsOff + i * 32); // class_idx
 
   return new Uint8Array(buf);
 }
