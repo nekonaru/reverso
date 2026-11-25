@@ -69,6 +69,10 @@ function makePe(): Uint8Array {
   u32(dataDir + 12, 40); // import directory size
   u32(dataDir + 4 * 8, 0x600); // certificate table (file offset)
   u32(dataDir + 4 * 8 + 4, 0x100); // certificate size
+  u32(dataDir + 6 * 8, 0x20e0); // debug directory RVA
+  u32(dataDir + 6 * 8 + 4, 28);
+  u32(dataDir + 13 * 8, 0x2120); // delay import directory RVA
+  u32(dataDir + 13 * 8 + 4, 32);
 
   // Section headers at opt+0xe0
   const sections = opt + 0xe0;
@@ -112,6 +116,26 @@ function makePe(): Uint8Array {
   u16(idata + 0xc0, 0); // hint
   buf.write("CreateFileA\0", idata + 0xc2, "ascii");
 
+  // Debug directory at 0x20e0: one CodeView entry pointing at file offset 0x700.
+  u32(idata + 0xe0 + 12, 2); // IMAGE_DEBUG_TYPE_CODEVIEW
+  u32(idata + 0xe0 + 16, 40); // sizeOfData
+  u32(idata + 0xe0 + 20, 0x700); // addressOfRawData
+  u32(idata + 0xe0 + 24, 0x700); // pointerToRawData
+  buf.write("RSDS", 0x700, "ascii");
+  for (let i = 0; i < 16; i++) buf.writeUInt8(i + 1, 0x704 + i);
+  u32(0x714, 1); // age
+  buf.write("C:\\build\\reverso.pdb\0", 0x718, "ascii");
+
+  // Delay import descriptor at 0x2120 (RVA-based, attrs=1).
+  u32(idata + 0x120, 1); // grAttrs: dlattrRva
+  u32(idata + 0x124, 0x2160); // DLL name RVA
+  u32(idata + 0x12c, 0x2180); // INT RVA
+  buf.write("user32.dll\0", idata + 0x160, "ascii");
+  u32(idata + 0x180, 0x21a0); // hint/name RVA
+  u32(idata + 0x184, 0); // terminator
+  u16(idata + 0x1a0, 0); // hint
+  buf.write("MessageBoxA\0", idata + 0x1a2, "ascii");
+
   return new Uint8Array(buf);
 }
 
@@ -126,6 +150,11 @@ describe("parsePe", () => {
     expect(pe.imports).toHaveLength(1);
     expect(pe.imports[0]!.dll).toBe("kernel32.dll");
     expect(pe.imports[0]!.functions).toContain("CreateFileA");
+    expect(pe.delayImports).toHaveLength(1);
+    expect(pe.delayImports[0]!.dll).toBe("user32.dll");
+    expect(pe.delayImports[0]!.functions).toContain("MessageBoxA");
+    expect(pe.pdbPath).toBe("C:\\build\\reverso.pdb");
+    expect(pe.debugDirectories).toBe(1);
     expect(pe.exports).toContain("ReversoExport");
     expect(pe.hasCertificate).toBe(true);
     expect(pe.imphash).toBe(createHash("md5").update("kernel32.createfilea", "utf8").digest("hex"));

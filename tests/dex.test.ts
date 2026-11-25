@@ -25,6 +25,15 @@ describe("parseDex", () => {
     expect(byCategory.get("class-descriptor")!.count).toBe(2);
   });
 
+  it("resolves class definitions to descriptors", () => {
+    const info = parseDex(makeDex());
+    expect(info.classes).toEqual([
+      "Lcom/example/app/MainActivity;",
+      "https://updates-malicious.example.com/beacon",
+      "AKIAIOSFODNN7EXAMPLE",
+    ]);
+  });
+
   it("rejects non-DEX input", () => {
     expect(() => parseDex(new Uint8Array([1, 2, 3]))).toThrow(/Not a DEX/);
     const buf = new Uint8Array(0x70);

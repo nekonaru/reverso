@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.6.0
+
+Deeper native inspection of dynamic dependencies, build paths and universal binaries. Audited against real Windows binaries.
+
+### New features
+
+- **ELF dependencies.** `reverso layout` resolves `DT_NEEDED`, `DT_RPATH` and `DT_RUNPATH` through `DT_STRTAB`, mapping virtual addresses to file offsets via `PT_LOAD` segments.
+- **PE delay imports.** The delay-load import directory is decoded into the same import list structure as regular imports (RVA and VA descriptor forms).
+- **PDB path.** CodeView debug entries are decoded to recover the build machine's PDB path and the number of debug directories.
+- **DEX classes.** `reverso dex` resolves `class_defs` through `type_ids` into readable class descriptors.
+- **Universal Mach-O slices.** Fat binaries now report each slice's CPU, bitness, file type, segments and UUID, with bounds checks and per-slice errors.
+
+### Bug fixes
+
+- **Fat binary header stride.** 64-bit fat Mach-O headers use 32-byte architecture entries, not 20-byte entries. The previous parser misread CPU types and slice offsets on fat64 files; it now uses the correct layout for both variants.
+
+### Improvements
+
+- Markdown reports show needed libraries, RPATH/RUNPATH, delay imports, PDB paths, DEX class lists and per-slice Mach-O details.
+
 ## v1.5.0
 
 Reverso becomes usable online: in the browser with no install, or through a small hosted API and MCP service.

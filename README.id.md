@@ -67,7 +67,7 @@ analyzer di browser, HTTP API dan MCP jarak jauh, lihat
 | --- | --- |
 | **Laporan triase lengkap** | `reverso analyze <file>`: hash, ukuran, entropy, format, strings, layout, hardening, daftar arsip dan analisis JavaScript dalam satu laporan, sebagai JSON atau Markdown |
 | **Deteksi format** | Deteksi magic byte untuk ELF, PE, Mach-O, ZIP (APK/IPA/JAR), WASM, DEX, PDF, PCAP dan lainnya |
-| **Struktur binary** | Struktur ELF, PE dan Mach-O: section, program header, impor, ekspor, entropy per section, PE import hash, Rich fingerprint, digest file Authenticode, ELF build-id, UUID Mach-O dan overlay |
+| **Struktur binary** | Struktur ELF, PE dan Mach-O: section, program header, impor, ekspor, shared library (ELF), delay import dan path PDB (PE), slice Mach-O universal, entropy per section dan fingerprint build |
 | **Cek hardening** | PIE, NX stack, stack canary, RELRO dan FORTIFY untuk ELF; ASLR, NX compat, Control Flow Guard, high entropy VA dan Authenticode untuk PE |
 | **Analisis entropy** | Entropy Shannon dengan deteksi region entropy tinggi untuk konten yang dipack atau dienkripsi |
 | **Intelijen strings** | String ASCII dan UTF-16LE, dikategorikan sebagai URL, IPv4, email, path, JWT, AWS key, GitHub token, Slack token, Google API key, private key dan assigned secret |
@@ -312,7 +312,7 @@ node scripts/verify.mjs   # pipeline penuh (typecheck, coverage, build, audit)
 
 | Cek | Syarat |
 | --- | --- |
-| Unit dan integration test | Semua pass (158 test) |
+| Unit dan integration test | Semua pass (161 test) |
 | Line coverage | Minimal 70% |
 | Branch coverage | Minimal 60% |
 | Type check | `tsc --noEmit`, nol error |
