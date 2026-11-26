@@ -88,4 +88,52 @@ describe("online HTTP service", () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("Reverso: Native reverse engineering toolkit");
   });
+
+  it("serves the built-in rule pack", async () => {
+    const response = await fetch(`${base}/api/rules`);
+    const body = await response.json();
+    expect(body.count).toBeGreaterThanOrEqual(10);
+    expect(body.rules[0].condition).toBeTruthy();
+  });
+
+  it("creates and retrieves a job", async () => {
+    const created = await fetch(`${base}/api/jobs?tool=format&label=sample.elf`, {
+      method: "POST",
+      body: makeElf64(),
+    });
+    expect(created.status).toBe(202);
+    const job = await created.json();
+    expect(job.status).toBe("done");
+    const fetched = await fetch(`${base}${job.pollUrl}`);
+    expect(fetched.status).toBe(200);
+    const body = await fetched.json();
+    expect(body.result.format).toBe("elf64");
+  });
+
+  it("issues an MCP session id on initialize", async () => {
+    const response = await fetch(`${base}/mcp`, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 9, method: "initialize" }),
+    });
+    const session = response.headers.get("mcp-session-id");
+    expect(session).toMatch(/^[a-f0-9-]{36}$/);
+    const followUp = await fetch(`${base}/mcp`, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json", "mcp-session-id": session! },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 10, method: "tools/list" }),
+    });
+    expect(followUp.status).toBe(200);
+  });
+
+  it("applies a deterministic rate limit helper", async () => {
+    const { checkRateLimit } = await import("../src/server/index.js");
+    const map = new Map<string, { count: number; resetAt: number }>();
+    expect(checkRateLimit(map, "ip", 0, 2, 1000).allowed).toBe(true);
+    expect(checkRateLimit(map, "ip", 10, 2, 1000).allowed).toBe(true);
+    const blocked = checkRateLimit(map, "ip", 20, 2, 1000);
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.retryAfter).toBeGreaterThan(0);
+    expect(checkRateLimit(map, "ip", 1100, 2, 1000).allowed).toBe(true);
+  });
 });

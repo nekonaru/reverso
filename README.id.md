@@ -220,6 +220,7 @@ Gunakan `node dist/cli.js <perintah>` di mana pun kamu memakai `reverso <perinta
 
 - Buka bagian "Try Reverso online" di situs proyek untuk menganalisis berkas sepenuhnya di browser, tanpa upload
 - Jalankan `npm start` untuk melayani situs yang sama, API analisis di `POST /api/analyze` dan endpoint MCP stateless di `POST /mcp`
+- Pakai `POST /api/jobs` untuk id pekerjaan yang bisa dipoll, `GET /api/rules` untuk rule pack, serta `REVERSO_API_KEY` opsional dan pembatasan laju request
 - Deploy `Dockerfile` atau blueprint `render.yaml` yang disertakan di host Node gratis mana pun; lihat [Menggunakan Reverso secara online](docs/online.md)
 
 ### Pakai Reverso dari MCP client
@@ -318,7 +319,7 @@ node scripts/verify.mjs   # pipeline penuh (typecheck, coverage, build, audit)
 
 | Cek | Syarat |
 | --- | --- |
-| Unit dan integration test | Semua pass (189 test) |
+| Unit dan integration test | Semua pass (193 test) |
 | Line coverage | Minimal 70% |
 | Branch coverage | Minimal 60% |
 | Type check | `tsc --noEmit`, nol error |

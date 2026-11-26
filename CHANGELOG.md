@@ -1,5 +1,22 @@
 # Changelog
 
+## v2.0.0
+
+Milestone release: a versioned report schema, a job based public API and hardened hosted operation.
+
+### New features
+
+- **Report schema v2.** Every analysis report carries `schemaVersion: "2.0"`. The field is additive, so existing consumers can ignore it.
+- **Job API.** `POST /api/jobs` returns a pollable job id; `GET /api/jobs/<id>` returns the result. Jobs are retained for ten minutes with a bounded queue.
+- **Rule pack endpoint.** `GET /api/rules` serves the built-in rule pack for agents and the web UI.
+- **Host hardening.** `REVERSO_API_KEY` requires an API key on `/api` and `/mcp`; `REVERSO_RATE_LIMIT` caps requests per client IP per minute with HTTP 429 and `Retry-After`.
+- **MCP sessions.** `initialize` issues an `Mcp-Session-Id` header; later requests echo it and unknown sessions are rejected.
+
+### Improvements
+
+- 193 tests pass, including job creation, rate-limit behavior, MCP sessions and fuzz coverage.
+- `docs/online.md` documents the complete hosted setup.
+
 ## v1.8.0
 
 Investigation workflows and report exports, with a fuzz corpus in CI.

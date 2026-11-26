@@ -1,5 +1,22 @@
 # Changelog
 
+## v2.0.0
+
+Rilis tonggak: schema laporan berversi, API publik berbasis pekerjaan dan pengoperasian hosted yang lebih keras.
+
+### Fitur baru
+
+- **Schema laporan v2.** Setiap laporan analisis membawa `schemaVersion: "2.0"`. Field ini aditif, sehingga konsumen lama bisa mengabaikannya.
+- **Job API.** `POST /api/jobs` mengembalikan id pekerjaan yang bisa dipoll; `GET /api/jobs/<id>` mengembalikan hasilnya. Pekerjaan disimpan sepuluh menit dengan antrean terbatas.
+- **Endpoint rule pack.** `GET /api/rules` menyajikan rule pack bawaan untuk agent dan UI web.
+- **Pengerasan host.** `REVERSO_API_KEY` mewajibkan API key pada `/api` dan `/mcp`; `REVERSO_RATE_LIMIT` membatasi request per IP per menit dengan HTTP 429 dan `Retry-After`.
+- **Sesi MCP.** `initialize` mengeluarkan header `Mcp-Session-Id`; request berikutnya mengirimkannya kembali dan sesi yang tidak dikenal ditolak.
+
+### Peningkatan
+
+- 193 test pass, termasuk pembuatan pekerjaan, perilaku rate limit, sesi MCP dan cakupan fuzz.
+- `docs/online.md` mendokumentasikan seluruh penyiapan hosted.
+
 ## v1.8.0
 
 Alur investigasi dan ekspor laporan, dengan corpus fuzz di CI.
