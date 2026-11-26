@@ -136,6 +136,15 @@ function makePe(): Uint8Array {
   u16(idata + 0x1a0, 0); // hint
   buf.write("MessageBoxA\0", idata + 0x1a2, "ascii");
 
+  // VS_VERSION_INFO resource data (UTF-16 marker plus VS_FIXEDFILEINFO).
+  const versionMarker = new TextEncoder().encode("VS_VERSION_INFO".split("").join("\0") + "\0");
+  Buffer.from(versionMarker).copy(buf, 0x5b0);
+  u32(0x5d0, 0xfeef04bd); // fixed file info signature
+  u32(0x5d8, (1 << 16) | 2); // file version MS -> 1.2
+  u32(0x5dc, (3 << 16) | 4); // file version LS -> 3.4
+  u32(0x5e0, (5 << 16) | 6); // product version MS -> 5.6
+  u32(0x5e4, (7 << 16) | 8); // product version LS -> 7.8
+
   return new Uint8Array(buf);
 }
 
@@ -155,6 +164,7 @@ describe("parsePe", () => {
     expect(pe.delayImports[0]!.functions).toContain("MessageBoxA");
     expect(pe.pdbPath).toBe("C:\\build\\reverso.pdb");
     expect(pe.debugDirectories).toBe(1);
+    expect(pe.versionInfo).toEqual({ fileVersion: "1.2.3.4", productVersion: "5.6.7.8" });
     expect(pe.exports).toContain("ReversoExport");
     expect(pe.hasCertificate).toBe(true);
     expect(pe.imphash).toBe(createHash("md5").update("kernel32.createfilea", "utf8").digest("hex"));

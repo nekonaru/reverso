@@ -69,10 +69,10 @@ if (toolSelect instanceof HTMLSelectElement && fileInput instanceof HTMLInputEle
 
   const updateVisibility = () => {
     const tool = toolSelect.value;
-    if (secondFileWrap instanceof HTMLElement) secondFileWrap.hidden = tool !== "diff";
+    if (secondFileWrap instanceof HTMLElement) secondFileWrap.hidden = !(tool === "diff" || tool === "fuzzy");
     if (patternWrap instanceof HTMLElement) patternWrap.hidden = tool !== "find-bytes";
     if (fileInput instanceof HTMLInputElement) fileInput.multiple = false;
-    runButton.textContent = tool === "diff" ? "Compare files" : "Analyze file";
+    runButton.textContent = tool === "diff" ? "Compare files" : tool === "fuzzy" ? "Compare fuzzy" : "Analyze file";
   };
   toolSelect.addEventListener("change", updateVisibility);
   updateVisibility();
@@ -97,7 +97,7 @@ if (toolSelect instanceof HTMLSelectElement && fileInput instanceof HTMLInputEle
         label: first.label,
         arg: patternInput instanceof HTMLInputElement ? patternInput.value.trim() : "",
       };
-      if (request.tool === "diff") {
+      if (request.tool === "diff" || request.tool === "fuzzy") {
         const second = await readFile(file2Input);
         request.otherBytes = second.bytes;
         request.otherLabel = second.label;

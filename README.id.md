@@ -73,6 +73,9 @@ analyzer di browser, HTTP API dan MCP jarak jauh, lihat
 | **Intelijen strings** | String ASCII dan UTF-16LE, dikategorikan sebagai URL, IPv4, email, path, JWT, AWS key, GitHub token, Slack token, Google API key, private key dan assigned secret |
 | **Analisis JavaScript** | Deteksi minifikasi, skor obfuscation dengan indikator, fingerprint framework (webpack, React, Vue, Angular, Next.js, Vite, Svelte, jQuery), referensi source map, ekstraksi URL dan endpoint API, secret scanning |
 | **Inventaris arsip** | Daftar entri ZIP/APK/IPA/JAR dengan ukuran, metode kompresi, flag enkripsi, deteksi tipe dan penandaan entri mencurigakan |
+| **Pencocokan aturan** | `reverso match` memakai rule pack bawaan YARA-lite (atau pack JSON sendiri) dengan kondisi aman: label, `N of them`, `and/or/not`, `filesize` dan `entropy` |
+| **Fuzzy hash** | `reverso fuzzy` menghasilkan hash piecewise bergaya ssdeep; `reverso diff` menambahkan skor kemiripan 0 sampai 100 |
+| **Inventaris versi dan dependensi** | Version info, delay import dan path PDB pada PE; library yang dibutuhkan, RPATH/RUNPATH dan jumlahan relokasi pada ELF; dylib dan rpath pada Mach-O |
 | **Sinyal packer** | Deteksi tanda tangan dan stub UPX, plus heuristik region entropy tinggi |
 
 ### Inspector dan utilitas
@@ -312,7 +315,7 @@ node scripts/verify.mjs   # pipeline penuh (typecheck, coverage, build, audit)
 
 | Cek | Syarat |
 | --- | --- |
-| Unit dan integration test | Semua pass (161 test) |
+| Unit dan integration test | Semua pass (176 test) |
 | Line coverage | Minimal 70% |
 | Branch coverage | Minimal 60% |
 | Type check | `tsc --noEmit`, nol error |

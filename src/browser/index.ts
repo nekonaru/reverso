@@ -15,12 +15,15 @@ import { parsePcap } from "../inspect/pcap.js";
 import { decodeJwt } from "../inspect/jwt.js";
 import { findPattern, hexDump } from "../inspect/bytes.js";
 import { diffBuffers } from "../inspect/diff.js";
+import { DEFAULT_RULES } from "../rules/defaults.js";
+import { parseRulePack, matchRules } from "../rules/engine.js";
+import { fuzzyHash, fuzzySimilarity } from "../inspect/fuzzy.js";
 
 const utf8Decoder = new TextDecoder("utf8");
 
 export type BrowserTool =
   | "analyze" | "format" | "entropy" | "strings" | "layout" | "hardening" | "archive"
-  | "js" | "wasm" | "dex" | "pcap" | "jwt" | "find-bytes" | "hex" | "diff";
+  | "js" | "wasm" | "dex" | "pcap" | "jwt" | "find-bytes" | "hex" | "diff" | "match" | "fuzzy";
 
 export interface BrowserRequest {
   tool: BrowserTool;
@@ -67,6 +70,17 @@ export function runBrowserTool(request: BrowserRequest): unknown {
     case "diff": {
       if (!request.otherBytes) throw new Error("Choose a second file to compare");
       return diffBuffers(bytes, request.otherBytes, label, request.otherLabel ?? "b");
+    }
+    case "match": {
+      const rules = arg ? parseRulePack(JSON.parse(arg)) : DEFAULT_RULES;
+      const matches = matchRules(rules, bytes);
+      return { total: matches.length, matched: matches.filter((match) => match.matched).map((match) => match.id), matches };
+    }
+    case "fuzzy": {
+      const left = fuzzyHash(bytes);
+      if (!request.otherBytes) return left;
+      const right = fuzzyHash(request.otherBytes);
+      return { ...left, otherHash: right.hash, similarity: fuzzySimilarity(left.hash, right.hash) };
     }
     default:
       throw new Error(`Unknown tool: ${request.tool as string}`);

@@ -12,7 +12,7 @@ const MAX_BODY_BYTES = Number(process.env["REVERSO_MAX_BODY_BYTES"] ?? 8 * 1024 
 const SITE_DIR = resolve(fileURLToPath(new URL("../../site/", import.meta.url)));
 const VALID_TOOLS = new Set<BrowserTool>([
   "analyze", "format", "entropy", "strings", "layout", "hardening", "archive", "js",
-  "wasm", "dex", "pcap", "jwt", "find-bytes", "hex", "diff",
+  "wasm", "dex", "pcap", "jwt", "find-bytes", "hex", "diff", "match", "fuzzy",
 ]);
 
 const CONTENT_TYPES: Record<string, string> = {

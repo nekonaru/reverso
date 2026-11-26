@@ -1,6 +1,7 @@
 /** Binary diffing: compare two files at the structural level. */
 
 import { analyzeBuffer } from "../core/analyze-buffer.js";
+import { fuzzyHash, fuzzySimilarity } from "./fuzzy.js";
 
 export interface FormatScopedLayout {
   addedSections: string[];
@@ -25,6 +26,7 @@ export interface DiffReport {
     categoriesOnlyInB: string[];
   };
   packerSignals: { a: string[]; b: string[] };
+  fuzzy: { a: string; b: string; similarity: number };
   differences: string[];
 }
 
@@ -64,6 +66,10 @@ export function diffBuffers(a: Uint8Array, b: Uint8Array, labelA = "a", labelB =
     differences.push(`strings total changed (${ra.strings.total} -> ${rb.strings.total})`);
   }
 
+  const fuzzyA = fuzzyHash(a);
+  const fuzzyB = fuzzyHash(b);
+  const fuzzy = { a: fuzzyA.hash, b: fuzzyB.hash, similarity: fuzzySimilarity(fuzzyA.hash, fuzzyB.hash) };
+
   return {
     identical: ra.hashes.sha256 === rb.hashes.sha256,
     a: { file: ra.file, sizeBytes: ra.sizeBytes, sha256: ra.hashes.sha256, format: ra.format.format, entropy: ra.entropy },
@@ -78,6 +84,7 @@ export function diffBuffers(a: Uint8Array, b: Uint8Array, labelA = "a", labelB =
       categoriesOnlyInB,
     },
     packerSignals: { a: ra.packerSignals, b: rb.packerSignals },
+    fuzzy,
     differences,
   };
 }
@@ -217,6 +224,7 @@ export function diffReportToMarkdown(report: DiffReport): string {
   lines.push(`- **Size:** ${report.a.sizeBytes} -> ${report.b.sizeBytes} bytes (${report.sizeDelta >= 0 ? "+" : ""}${report.sizeDelta})`);
   lines.push(`- **Format:** ${report.a.format} -> ${report.b.format}`);
   lines.push(`- **Entropy:** ${report.a.entropy} -> ${report.b.entropy} (delta ${report.entropyDelta >= 0 ? "+" : ""}${report.entropyDelta})`);
+  lines.push(`- **Fuzzy similarity:** ${report.fuzzy.similarity}%`);
   lines.push("");
   lines.push("## Differences");
   lines.push("");

@@ -9,8 +9,8 @@ function makeMacho64(): Uint8Array {
   buf.writeUInt32LE(0x0100000c, 4); // CPU_TYPE_ARM64
   buf.writeUInt32LE(0, 8); // cpusubtype
   buf.writeUInt32LE(2, 12); // filetype: execute
-  buf.writeUInt32LE(4, 16); // ncmds
-  buf.writeUInt32LE(0x48 + 0x18 + 0x10 + 0x18, 20); // sizeofcmds
+  buf.writeUInt32LE(5, 16); // ncmds
+  buf.writeUInt32LE(0x48 + 0x18 + 0x10 + 0x18 + 48, 20); // sizeofcmds
   buf.writeUInt32LE(0x00218085, 24); // flags (PIE | dead-strippable | twolevel etc.)
   buf.writeUInt32LE(0, 28); // reserved
 
@@ -47,6 +47,13 @@ function makeMacho64(): Uint8Array {
   buf.writeUInt32LE(0x1b, offset);
   buf.writeUInt32LE(24, offset + 4);
   Buffer.from("00112233445566778899aabbccddeeff", "hex").copy(buf, offset + 8);
+  offset += 24;
+
+  // LC_LOAD_DYLIB: 48 bytes, name at command offset 24.
+  buf.writeUInt32LE(0x0c, offset);
+  buf.writeUInt32LE(48, offset + 4);
+  buf.writeUInt32LE(24, offset + 8); // lc_str offset
+  buf.write("@rpath/libfoo.dylib\0", offset + 24, "ascii");
 
   return new Uint8Array(buf);
 }
@@ -64,6 +71,8 @@ describe("parseMachO", () => {
     expect(macho.encrypted).toBe(false);
     expect(macho.flags).toContain("pie");
     expect(macho.uuid).toBe("00112233-4455-6677-8899-aabbccddeeff");
+    expect(macho.dylibs).toEqual(["@rpath/libfoo.dylib"]);
+    expect(macho.rpaths).toEqual([]);
   });
 
   it("parses fat universal binaries and every slice", () => {

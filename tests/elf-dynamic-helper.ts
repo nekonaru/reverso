@@ -1,14 +1,14 @@
 /** Minimal ELF64 with a dynamic section and DT_NEEDED entries. */
 export function makeElfWithDynamic(): Uint8Array {
   const encoder = new TextEncoder();
-  const shstrtab = encoder.encode("\0.dynstr\0.dynamic\0.shstrtab\0");
+  const shstrtab = Buffer.from(encoder.encode("\0.dynstr\0.dynamic\0.shstrtab\0.rela.dyn\0"));
   const strtab = Buffer.from(encoder.encode("\0libc.so.6\0libm.so.6\0/usr/lib\0"));
   const libc = 1;
   const libm = 11;
   const rpath = 21;
 
   const shoff = 64;
-  const shnum = 4;
+  const shnum = 5;
   const shentsize = 64;
   const strtabOffset = shoff + shnum * shentsize;
   const shstrOffset = strtabOffset + strtab.length;
@@ -23,7 +23,8 @@ export function makeElfWithDynamic(): Uint8Array {
   ];
   const dynamicSize = entries.length * 16;
   const dynamicOffset = shstrOffset + shstrtab.length;
-  const buf = Buffer.alloc(dynamicOffset + dynamicSize);
+  const relaOffset = dynamicOffset + dynamicSize;
+  const buf = Buffer.alloc(relaOffset + 48);
 
   buf.writeUInt8(0x7f, 0);
   buf.write("ELF", 1, "ascii");
@@ -54,6 +55,14 @@ export function makeElfWithDynamic(): Uint8Array {
   writeShdr(1, 1, 3, 0x2n, 0x1000, strtabOffset, strtab.length, 0); // .dynstr
   writeShdr(2, 9, 6, 0x3n, 0x2000, dynamicOffset, dynamicSize, 1); // .dynamic
   writeShdr(3, 18, 3, 0n, 0, shstrOffset, shstrtab.length, 0); // .shstrtab
+  const rela = shoff + 4 * shentsize;
+  buf.writeUInt32LE(27, rela); // name ".rela.dyn"
+  buf.writeUInt32LE(4, rela + 4); // SHT_RELA
+  buf.writeBigUInt64LE(0x2n, rela + 8);
+  buf.writeBigUInt64LE(0x3000n, rela + 16);
+  buf.writeBigUInt64LE(BigInt(relaOffset), rela + 24);
+  buf.writeBigUInt64LE(48n, rela + 32);
+  buf.writeBigUInt64LE(24n, rela + 56); // entsize
 
   strtab.copy(buf, strtabOffset);
   Buffer.from(shstrtab).copy(buf, shstrOffset);

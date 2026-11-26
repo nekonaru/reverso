@@ -51,6 +51,7 @@ export interface ElfInfo {
   needed: string[];
   rpath: string | null;
   runpath: string | null;
+  relocations: { rel: number; rela: number };
   stripped: boolean;
   pie: boolean;
   nxStack: boolean;
@@ -65,6 +66,8 @@ const SHN_XINDEX = 0xffff;
 const SHT_SYMTAB = 2;
 const SHT_DYNAMIC = 6;
 const SHT_NOTE = 7;
+const SHT_RELA = 4;
+const SHT_REL = 9;
 const SHT_DYNSYM = 11;
 const SHT_NOBITS = 8;
 
@@ -397,6 +400,14 @@ export function parseElf(buf: Uint8Array): ElfInfo {
     .filter((name): name is string => name !== null);
   const rpath = dynamicString(rpathOffset);
   const runpath = dynamicString(runpathOffset);
+  let rel = 0;
+  let rela = 0;
+  for (const section of rawSections) {
+    if (section.entrySize <= 0) continue;
+    const count = Math.floor(section.size / section.entrySize);
+    if (section.type === SHT_REL) rel += count;
+    if (section.type === SHT_RELA) rela += count;
+  }
 
   const nxStack = (() => {
     const stack = programHeaders.find((p) => p.type === PT_GNU_STACK);
@@ -437,6 +448,7 @@ export function parseElf(buf: Uint8Array): ElfInfo {
     needed,
     rpath,
     runpath,
+    relocations: { rel, rela },
     stripped: !hasSymtab,
     pie: type === 3,
     nxStack,

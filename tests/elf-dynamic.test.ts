@@ -9,6 +9,7 @@ describe("ELF dynamic entries", () => {
     expect(elf.rpath).toBe("/usr/lib");
     expect(elf.runpath).toBeNull();
     expect(elf.bindNow).toBe(true);
+    expect(elf.relocations).toEqual({ rel: 0, rela: 2 });
   });
 
   it("returns empty dependency data for a static ELF", async () => {
