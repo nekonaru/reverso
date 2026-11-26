@@ -1,19 +1,40 @@
-/** Zero-dependency HTTP service: public analysis API, remote MCP and static site. */
+/** Zero-dependency HTTP service: static site, analysis API, job queue and remote MCP. */
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { realpathSync } from "node:fs";
+import { randomUUID as uuid } from "node:crypto";
 import { VERSION } from "../version.js";
 import { runBrowserTool, type BrowserTool } from "../browser/index.js";
 import { handleMessage, type JsonRpcMessage } from "../mcp/server.js";
+import { DEFAULT_RULES } from "../rules/defaults.js";
 
 const MAX_BODY_BYTES = Number(process.env["REVERSO_MAX_BODY_BYTES"] ?? 8 * 1024 * 1024);
+const API_KEY = process.env["REVERSO_API_KEY"] ?? "";
+const RATE_LIMIT = Number(process.env["REVERSO_RATE_LIMIT"] ?? 120);
+const RATE_WINDOW_MS = 60_000;
+const JOB_TTL_MS = 10 * 60_000;
+const MAX_JOBS = 200;
 const SITE_DIR = resolve(fileURLToPath(new URL("../../site/", import.meta.url)));
 const VALID_TOOLS = new Set<BrowserTool>([
   "analyze", "format", "entropy", "strings", "layout", "hardening", "archive", "js",
   "wasm", "dex", "pcap", "jwt", "find-bytes", "hex", "diff", "match", "fuzzy",
 ]);
+
+interface Job {
+  id: string;
+  tool: BrowserTool;
+  status: "done" | "error";
+  result?: unknown;
+  error?: string;
+  createdAt: number;
+  expiresAt: number;
+}
+
+const jobs = new Map<string, Job>();
+const sessions = new Map<string, number>();
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 
 const CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -26,12 +47,13 @@ const CONTENT_TYPES: Record<string, string> = {
   ".webmanifest": "application/manifest+json",
 };
 
-function json(res: ServerResponse, status: number, value: unknown): void {
+function json(res: ServerResponse, status: number, value: unknown, extra: Record<string, string> = {}): void {
   const body = JSON.stringify(value, (_key, item) => (typeof item === "bigint" ? item.toString() : item));
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
     "content-length": Buffer.byteLength(body),
     ...corsHeaders(),
+    ...extra,
   });
   res.end(body);
 }
@@ -40,8 +62,53 @@ function corsHeaders(): Record<string, string> {
   return {
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET, POST, OPTIONS",
-    "access-control-allow-headers": "content-type, mcp-protocol-version, mcp-session-id",
+    "access-control-allow-headers": "content-type, x-api-key, mcp-protocol-version, mcp-session-id",
+    "access-control-expose-headers": "mcp-session-id, mcp-protocol-version, retry-after",
   };
+}
+
+/** Pure rate-limit helper, exported for deterministic tests. */
+export function checkRateLimit(
+  map: Map<string, { count: number; resetAt: number }>,
+  key: string,
+  now: number,
+  max: number,
+  windowMs: number,
+): { allowed: boolean; retryAfter: number } {
+  const bucket = map.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    map.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, retryAfter: 0 };
+  }
+  bucket.count += 1;
+  if (bucket.count > max) {
+    return { allowed: false, retryAfter: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)) };
+  }
+  return { allowed: true, retryAfter: 0 };
+}
+
+function pruneExpired(): void {
+  const now = Date.now();
+  for (const [id, job] of jobs) if (job.expiresAt <= now) jobs.delete(id);
+  for (const [id, created] of sessions) if (created + 30 * 60_000 <= now) sessions.delete(id);
+  for (const [key, bucket] of rateBuckets) if (bucket.resetAt <= now) rateBuckets.delete(key);
+}
+
+function accessAllowed(req: IncomingMessage, res: ServerResponse, pathname: string): boolean {
+  if (!pathname.startsWith("/api") && pathname !== "/mcp") return true;
+  if (API_KEY && req.headers["x-api-key"] !== API_KEY) {
+    json(res, 401, { error: "Missing or invalid API key" });
+    return false;
+  }
+  const ip = typeof req.headers["x-forwarded-for"] === "string"
+    ? req.headers["x-forwarded-for"].split(",")[0]!.trim()
+    : req.socket.remoteAddress ?? "unknown";
+  const limit = checkRateLimit(rateBuckets, ip, Date.now(), RATE_LIMIT, RATE_WINDOW_MS);
+  if (!limit.allowed) {
+    json(res, 429, { error: "Rate limit exceeded" }, { "retry-after": String(limit.retryAfter) });
+    return false;
+  }
+  return true;
 }
 
 async function readBody(req: IncomingMessage): Promise<Buffer> {
@@ -60,8 +127,27 @@ async function readBody(req: IncomingMessage): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+function requestTool(url: URL, body: Buffer): unknown {
+  const tool = url.searchParams.get("tool") as BrowserTool;
+  if (!VALID_TOOLS.has(tool)) {
+    throw new Error(`Unknown or missing tool. Choose one of: ${[...VALID_TOOLS].join(", ")}`);
+  }
+  return runBrowserTool({
+    tool,
+    bytes: new Uint8Array(body),
+    label: url.searchParams.get("label") ?? "upload.bin",
+    arg: url.searchParams.get("arg") ?? undefined,
+  });
+}
+
 async function serveStatic(pathname: string, res: ServerResponse): Promise<void> {
-  const relative = decodeURIComponent(pathname === "/" ? "/index.html" : pathname).replace(/^\/+/, "");
+  let relative: string;
+  try {
+    relative = decodeURIComponent(pathname === "/" ? "/index.html" : pathname).replace(/^\/+/, "");
+  } catch {
+    json(res, 400, { error: "Invalid path" });
+    return;
+  }
   const filePath = resolve(SITE_DIR, relative);
   const rel = relativePath(SITE_DIR, filePath);
   if (rel.startsWith("..") || rel.includes(`..${sep}`)) {
@@ -96,6 +182,7 @@ function relativePath(from: string, to: string): string {
 
 async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+  pruneExpired();
 
   if (req.method === "OPTIONS") {
     res.writeHead(204, corsHeaders());
@@ -104,25 +191,28 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   }
 
   if (req.method === "GET" && url.pathname === "/health") {
-    json(res, 200, { status: "ok", version: VERSION, service: "reverso-online" });
+    json(res, 200, {
+      status: "ok",
+      version: VERSION,
+      service: "reverso-online",
+      schemaVersion: "2.0",
+      jobs: jobs.size,
+      auth: API_KEY ? "required" : "none",
+    });
+    return;
+  }
+
+  if (!accessAllowed(req, res, url.pathname)) return;
+
+  if (req.method === "GET" && url.pathname === "/api/rules") {
+    json(res, 200, { count: DEFAULT_RULES.length, rules: DEFAULT_RULES });
     return;
   }
 
   if (req.method === "POST" && url.pathname === "/api/analyze") {
-    const tool = url.searchParams.get("tool") as BrowserTool;
-    if (!VALID_TOOLS.has(tool)) {
-      json(res, 400, { error: `Unknown or missing tool. Choose one of: ${[...VALID_TOOLS].join(", ")}` });
-      return;
-    }
     try {
       const body = await readBody(req);
-      const result = runBrowserTool({
-        tool,
-        bytes: new Uint8Array(body),
-        label: url.searchParams.get("label") ?? "upload.bin",
-        arg: url.searchParams.get("arg") ?? undefined,
-      });
-      json(res, 200, { tool, bytes: body.length, result });
+      json(res, 200, { schemaVersion: "2.0", tool: url.searchParams.get("tool"), bytes: body.length, result: requestTool(url, body) });
     } catch (error) {
       const status = (error as Error & { status?: number }).status ?? 400;
       json(res, status, { error: (error as Error).message });
@@ -130,13 +220,66 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     return;
   }
 
+  if (req.method === "POST" && url.pathname === "/api/jobs") {
+    try {
+      if (jobs.size >= MAX_JOBS) {
+        json(res, 503, { error: "Job queue full. Try again shortly." });
+        return;
+      }
+      const body = await readBody(req);
+      const tool = url.searchParams.get("tool") as BrowserTool;
+      if (!VALID_TOOLS.has(tool)) {
+        json(res, 400, { error: "Unknown or missing tool" });
+        return;
+      }
+      const id = uuid();
+      const now = Date.now();
+      const job: Job = { id, tool, status: "done", result: requestTool(url, body), createdAt: now, expiresAt: now + JOB_TTL_MS };
+      jobs.set(id, job);
+      json(res, 202, { id, status: job.status, pollUrl: `/api/jobs/${id}`, expiresAt: job.expiresAt });
+    } catch (error) {
+      const status = (error as Error & { status?: number }).status ?? 400;
+      json(res, status, { error: (error as Error).message });
+    }
+    return;
+  }
+
+  const jobMatch = url.pathname.match(/^\/api\/jobs\/([a-f0-9-]{36})$/);
+  if (req.method === "GET" && jobMatch) {
+    const job = jobs.get(jobMatch[1]!);
+    if (!job) {
+      json(res, 404, { error: "Job not found or expired" });
+      return;
+    }
+    json(res, 200, {
+      id: job.id,
+      tool: job.tool,
+      status: job.status,
+      ...(job.result !== undefined ? { result: job.result } : {}),
+      ...(job.error ? { error: job.error } : {}),
+    });
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/mcp") {
     try {
       const body = await readBody(req);
       const message = JSON.parse(body.toString("utf8")) as JsonRpcMessage;
+      const suppliedSession = req.headers["mcp-session-id"];
+      if (typeof suppliedSession === "string" && suppliedSession && !sessions.has(suppliedSession)) {
+        json(res, 400, { error: "Unknown MCP session" });
+        return;
+      }
+      const isInitialize = message.method === "initialize";
+      const sessionId = isInitialize ? uuid() : typeof suppliedSession === "string" ? suppliedSession : "";
+      if (isInitialize) sessions.set(sessionId, Date.now());
       const response = await handleMessage(message);
+      const headers: Record<string, string> = {
+        "mcp-protocol-version": "2025-06-18",
+        ...(sessionId ? { "mcp-session-id": sessionId } : {}),
+      };
       if (!response) {
-        res.writeHead(202, corsHeaders());
+        res.writeHead(202, { ...corsHeaders(), ...headers });
         res.end();
         return;
       }
@@ -145,18 +288,13 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
         res.writeHead(200, {
           "content-type": "text/event-stream; charset=utf-8",
           "cache-control": "no-cache",
-          "mcp-protocol-version": "2025-06-18",
           ...corsHeaders(),
+          ...headers,
         });
         res.end(`event: message\ndata: ${JSON.stringify(response)}\n\n`);
         return;
       }
-      res.writeHead(200, {
-        "content-type": "application/json; charset=utf-8",
-        "mcp-protocol-version": "2025-06-18",
-        ...corsHeaders(),
-      });
-      res.end(JSON.stringify(response));
+      json(res, 200, response, headers);
     } catch (error) {
       const status = (error as Error & { status?: number }).status ?? 400;
       json(res, status, { error: (error as Error).message });

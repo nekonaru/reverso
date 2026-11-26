@@ -13,6 +13,7 @@ import { analyzeJavaScript, type JsAnalysis } from "../js/jsanal.js";
 export const MAX_INPUT_BYTES = 256 * 1024 * 1024;
 
 export interface AnalysisReport {
+  schemaVersion: "2.0";
   file: string;
   sizeBytes: number;
   hashes: { md5: string; sha1: string; sha256: string };
@@ -74,6 +75,7 @@ export function analyzeBuffer(buf: Uint8Array, label: string): AnalysisReport {
   const packerSignals = detectPackers(buf, format.format, strings.all, highEntropyRegions.length);
 
   return {
+    schemaVersion: "2.0",
     file: label,
     sizeBytes: buf.length,
     hashes,

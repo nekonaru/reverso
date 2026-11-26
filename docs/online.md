@@ -46,13 +46,39 @@ Limits: 8 MB request body by default (`REVERSO_MAX_BODY_BYTES`), 60 second
 request timeout, CORS enabled for all origins. This endpoint is stateless and
 parses files without executing them.
 
-Other routes: `GET /health` for health checks and `GET /` for the static site.
+Other routes: `GET /health` for health checks, `GET /` for the static site,
+`GET /api/rules` for the built-in rule pack, and `POST /api/jobs` for a job id
+that can be polled at `GET /api/jobs/<id>`. All analysis responses carry
+`schemaVersion: "2.0"`. Older clients can ignore this additive field.
+
+## Authentication and rate limits
+
+The service is open by default. Set `REVERSO_API_KEY` to require the
+`x-api-key` header on every `/api` and `/mcp` request. Set
+`REVERSO_RATE_LIMIT` to cap requests per client IP per minute (default 120).
+Exceeded limits return HTTP 429 with a `Retry-After` header. Health checks and
+static files are not rate-limited.
+
+## Job API
+
+```bash
+curl -X POST "https://YOUR-HOST/api/jobs?tool=analyze&label=sample.bin" \
+  --data-binary @sample.bin
+# returns {"id":"...","status":"done","pollUrl":"/api/jobs/..."}
+curl "https://YOUR-HOST/api/jobs/<id>"
+```
+
+Jobs are computed immediately and retained for ten minutes, with a bounded
+in-memory queue. This gives clients a stable poll URL even if the analysis
+takes a few seconds.
 
 ## Remote MCP
 
 `POST /mcp` speaks stateless Model Context Protocol JSON-RPC. It answers
 `initialize`, `ping`, `tools/list` and `tools/call`, in JSON or as a single
-`text/event-stream` message when the client asks for SSE.
+`text/event-stream` message when the client asks for SSE. The `initialize`
+response carries a `Mcp-Session-Id` header; send it back on later requests.
+Sessions are kept for 30 minutes and unknown session ids are rejected.
 
 Because a remote server cannot read the client's filesystem, every file tool
 also accepts inline base64 content. Example:
