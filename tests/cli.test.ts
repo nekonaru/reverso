@@ -169,4 +169,40 @@ describe("run", () => {
     expect(code).toBe(0);
     expect(JSON.parse(output).hash).toMatch(/^\d+:/);
   });
+
+  it("exports SARIF and HTML reports", async () => {
+    const sarif = await captureStdout(() => run(["analyze", file, "--format", "sarif"]));
+    expect(sarif.code).toBe(0);
+    expect(JSON.parse(sarif.output).version).toBe("2.1.0");
+    const html = await captureStdout(() => run(["analyze", file, "--format", "html"]));
+    expect(html.code).toBe(0);
+    expect(html.output).toContain("<!DOCTYPE html>");
+  });
+
+  it("creates and verifies a baseline", async () => {
+    const baseline = join(dir, "..", `reverso-baseline-${Date.now()}.json`);
+    const created = await captureStdout(() => run(["baseline", "create", dir, "--out", baseline]));
+    expect(created.code).toBe(0);
+    const verified = await captureStdout(() => run(["baseline", "verify", dir, "--baseline", baseline]));
+    expect(verified.code).toBe(0);
+    expect(JSON.parse(verified.output).changed).toEqual([]);
+    await rm(baseline, { force: true });
+  });
+
+  it("creates a case, adds evidence and renders a report", async () => {
+    const caseFile = join(dir, "case.json");
+    const created = await captureStdout(() => run(["case", "create", "Test case", "--out", caseFile]));
+    expect(created.code).toBe(0);
+    const added = await captureStdout(() => run(["case", "add", caseFile, file]));
+    expect(added.code).toBe(0);
+    const report = await captureStdout(() => run(["case", "report", caseFile, "--format", "md"]));
+    expect(report.code).toBe(0);
+    expect(report.output).toContain("# Case: Test case");
+  });
+
+  it("exports a scan as CSV", async () => {
+    const { code, output } = await captureStdout(() => run(["scan", dir, "--format", "csv"]));
+    expect(code).toBe(0);
+    expect(output).toContain("file,format,sizeBytes,entropy,sha256,packerSignals");
+  });
 });

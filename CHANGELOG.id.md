@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.8.0
+
+Alur investigasi dan ekspor laporan, dengan corpus fuzz di CI.
+
+### Fitur baru
+
+- **Baseline direktori.** `reverso baseline create <dir>` menyimpan SHA-256, ukuran dan format per file. `reverso baseline verify <dir>` melaporkan file baru, hilang, berubah dan tidak berubah, dengan output JSON atau Markdown serta kode keluar bukan nol saat ada perbedaan.
+- **Kasus investigasi.** `reverso case create/add/report` menyimpan evidence dengan hash, ukuran, format, waktu dan catatan dalam satu file JSON.
+- **Ekspor laporan.** `reverso analyze --format sarif` menghasilkan SARIF 2.1.0 untuk CI, `--format html` menghasilkan laporan mandiri bergaya, dan `reverso scan --format csv` menghasilkan inventaris siap spreadsheet.
+- **Corpus fuzz.** CI kini menjalankan input acak dan terpotong yang deterministik melalui `analyzeBuffer` dan parser individual.
+
+### Peningkatan
+
+- Analyzer di browser menyimpan sepuluh analisis terakhir di localStorage browser dan memungkinkan hasil dipulihkan dengan satu klik. Tidak ada data yang keluar dari browser.
+
 ## v1.7.0
 
 Pencocokan aturan, kemiripan fuzzy dan inventaris build yang lebih dalam, semuanya native.
