@@ -75,6 +75,9 @@ For the in-browser analyzer, HTTP API and remote MCP service, see
 | **Archive inventory** | ZIP/APK/IPA/JAR entry listing with sizes, compression method, encryption flags, type detection and suspicious entry flagging |
 | **Rule matching** | `reverso match` applies the built-in YARA-lite rule pack (or your own JSON pack) with safe conditions: labels, `N of them`, `and/or/not`, `filesize` and `entropy` |
 | **Fuzzy hashing** | `reverso fuzzy` computes an ssdeep-style piecewise hash; `reverso diff` adds a 0 to 100 similarity score |
+| **Baselines** | `reverso baseline create/verify` records file hashes and detects added, removed and changed files |
+| **Cases** | `reverso case create/add/report` keeps evidence, hashes and notes in one JSON case file |
+| **Report exports** | SARIF for CI, CSV for spreadsheets and standalone HTML for sharing, in addition to JSON and Markdown |
 | **Version and dependency inventory** | PE version info, delay imports and PDB path; ELF needed libraries, RPATH/RUNPATH and relocation counts; Mach-O dylibs and rpaths |
 | **Packer signals** | UPX signature and stub detection, plus multi-region high entropy heuristic |
 
@@ -316,7 +319,7 @@ node scripts/verify.mjs   # full pipeline (typecheck, coverage, build, audit)
 
 | Check | Requirement |
 | --- | --- |
-| Unit and integration tests | All pass (176 tests) |
+| Unit and integration tests | All pass (189 tests) |
 | Line coverage | At least 70% |
 | Branch coverage | At least 60% |
 | Type check | `tsc --noEmit`, zero errors |

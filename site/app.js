@@ -32,6 +32,39 @@ const status = document.getElementById("online-status");
 const resultCode = document.getElementById("result-code");
 const copyResult = document.getElementById("copy-result");
 const downloadResult = document.getElementById("download-result");
+const historyList = document.getElementById("history-list");
+
+const loadHistory = () => {
+  try {
+    const raw = window.localStorage.getItem("reverso-history");
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.slice(0, 10) : [];
+  } catch {
+    return [];
+  }
+};
+
+const renderHistory = () => {
+  if (!(historyList instanceof HTMLUListElement)) return;
+  historyList.replaceChildren();
+  for (const item of loadHistory()) {
+    const li = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = `${item.tool} - ${item.label}`;
+    button.addEventListener("click", () => {
+      resultCode.textContent = typeof item.result === "string" ? item.result : "";
+      if (toolSelect instanceof HTMLSelectElement && typeof item.tool === "string") {
+        toolSelect.value = item.tool;
+        updateVisibility();
+      }
+      setStatus(`Restored ${item.label} from local history.`);
+    });
+    li.append(button);
+    historyList.append(li);
+  }
+};
+renderHistory();
 
 if (toolSelect instanceof HTMLSelectElement && fileInput instanceof HTMLInputElement &&
     runButton instanceof HTMLButtonElement && status instanceof HTMLElement && resultCode instanceof HTMLElement) {
@@ -106,6 +139,19 @@ if (toolSelect instanceof HTMLSelectElement && fileInput instanceof HTMLInputEle
       if (!reply.ok) throw new Error(reply.error || "Analysis failed.");
       resultCode.textContent = JSON.stringify(reply.result, null, 2);
       setStatus(`Done. ${request.label} analyzed in your browser.`);
+      try {
+        const history = loadHistory();
+        history.unshift({
+          tool: request.tool,
+          label: request.label,
+          result: (resultCode.textContent ?? "").slice(0, 100000),
+          time: Date.now(),
+        });
+        window.localStorage.setItem("reverso-history", JSON.stringify(history.slice(0, 10)));
+        renderHistory();
+      } catch {
+        setStatus(`Done. Local history could not be saved.`);
+      }
     } catch (error) {
       resultCode.textContent = "";
       setStatus(error instanceof Error ? error.message : String(error));

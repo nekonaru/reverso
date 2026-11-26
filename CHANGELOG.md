@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.8.0
+
+Investigation workflows and report exports, with a fuzz corpus in CI.
+
+### New features
+
+- **Directory baselines.** `reverso baseline create <dir>` records SHA-256, size and format per file. `reverso baseline verify <dir>` reports added, removed, changed and unchanged files, with JSON or Markdown output and a non-zero exit code when differences exist.
+- **Investigation cases.** `reverso case create/add/report` stores evidence with hash, size, format, timestamp and notes in a single JSON file.
+- **Report exports.** `reverso analyze --format sarif` emits SARIF 2.1.0 for CI, `--format html` produces a standalone styled report, and `reverso scan --format csv` produces a spreadsheet-ready inventory.
+- **Fuzz corpus.** CI now runs deterministic random and truncated inputs through `analyzeBuffer` and the individual parsers.
+
+### Improvements
+
+- The in-browser analyzer keeps the last ten analyses in browser-local storage and lets you restore any result with one click. No data leaves the browser.
+
 ## v1.7.0
 
 Rule matching, fuzzy similarity and deeper build inventories, all native.

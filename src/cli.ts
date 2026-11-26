@@ -28,10 +28,13 @@ import { decodeJwt } from "./inspect/jwt.js";
 import { DEFAULT_RULES } from "./rules/defaults.js";
 import { parseRulePack, matchRules } from "./rules/engine.js";
 import { fuzzyHash, fuzzySimilarity } from "./inspect/fuzzy.js";
+import { createBaseline, verifyBaseline, baselineDiffToMarkdown } from "./inspect/baseline.js";
+import { createCase, addEvidence, caseToMarkdown, type Case } from "./inspect/case.js";
+import { toSarif, toHtml, scanToCsv } from "./inspect/exports.js";
 
 export { VERSION };
 
-const ANALYZERS = ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js", "scan", "diff", "find-bytes", "wasm", "dex", "pcap", "jwt", "match", "rules", "fuzzy", "hex"] as const;
+const ANALYZERS = ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js", "scan", "diff", "find-bytes", "wasm", "dex", "pcap", "jwt", "match", "rules", "fuzzy", "baseline", "case", "hex"] as const;
 const COMMANDS = [...ANALYZERS, "site", "mcp", "doctor", "capabilities", "help", "version"] as const;
 
 const USAGE = `reverso ${VERSION}
@@ -52,6 +55,8 @@ Commands:
   match <file>        Apply the built-in rule pack (or --rules <file>) to a file
   rules list          List the built-in rules
   fuzzy <file>        Fuzzy hash a file (--compare <file> for similarity)
+  baseline <action>   create|verify a directory baseline (integrity check)
+  case <action>       create|add|report an investigation case
   analyze <file...>   Full static analysis report
   layout <file>       ELF/PE/Mach-O structure (sections, imports, exports)
   hardening <file>    Hardening checks (PIE, NX, ASLR, RELRO, CFG, ...)
@@ -68,8 +73,20 @@ Commands:
   version             Show the version
 
 Options (analyze):
-  --format <json|md>  Output format (default: json)
+  --format <json|md|sarif|html>  Output format (default: json)
   --out <file>        Write the report to a file instead of stdout
+
+Options (scan):
+  --format <json|md|csv>  Output format (default: json)
+
+Options (baseline):
+  --out <file>        Where to write a new baseline
+  --baseline <file>   Baseline file for verification
+  --format <json|md>  Verification output format (default: json)
+
+Options (case):
+  --out <file>        Where to write a new case
+  --notes <text>      Notes attached to the added evidence
 
 Options (strings):
   --min-length <n>    Minimum string length (default: 4)
@@ -203,7 +220,11 @@ export async function run(argv: string[]): Promise<number> {
         const payload = reports.length === 1 ? reports[0]! : reports;
         const rendered = format === "md" || format === "markdown"
           ? reports.map(reportToMarkdown).join("\n\n---\n\n")
-          : JSON.stringify(payload, (_key, v) => (typeof v === "bigint" ? v.toString() : v), 2);
+          : format === "sarif"
+            ? JSON.stringify({ $schema: "https://json.schemastore.org/sarif-2.1.0.json", version: "2.1.0", runs: reports.map((report) => (toSarif(report) as { runs: unknown[] }).runs[0]) }, null, 2)
+            : format === "html"
+              ? reports.map(toHtml).join("\n")
+              : JSON.stringify(payload, (_key, v) => (typeof v === "bigint" ? v.toString() : v), 2);
         if (out) {
           await writeFile(out, rendered);
           process.stdout.write(`Report written to ${out}\n`);
@@ -285,7 +306,11 @@ export async function run(argv: string[]): Promise<number> {
         if (!target) throw new UsageError("scan requires a directory");
         const report = await scanDirectory(target, flagNumber(flags, "max-files", 200, 1, 1000));
         const format = flagString(flags, "format", "json");
-        const rendered = format === "md" || format === "markdown" ? scanReportToMarkdown(report) : JSON.stringify(report, null, 2);
+        const rendered = format === "md" || format === "markdown"
+          ? scanReportToMarkdown(report)
+          : format === "csv"
+            ? scanToCsv(report)
+            : JSON.stringify(report, null, 2);
         const out = flagString(flags, "out");
         if (out) {
           await writeFile(out, rendered);
@@ -365,6 +390,63 @@ export async function run(argv: string[]): Promise<number> {
           ...(compare ? { compare, otherHash: right!.hash, similarity: fuzzySimilarity(left.hash, right!.hash) } : {}),
         });
         return 0;
+      }
+
+      case "baseline": {
+        const action = positional[1];
+        const target = positional[2];
+        if (!target) throw new UsageError("baseline requires create|verify and a directory");
+        if (action === "create") {
+          const out = flagString(flags, "out");
+          if (!out) throw new UsageError("baseline create requires --out <file>");
+          const scan = await scanDirectory(target, flagNumber(flags, "max-files", 200, 1, 1000));
+          const baseline = createBaseline(target, scan.entries);
+          await writeFile(out, JSON.stringify(baseline, null, 2));
+          process.stdout.write(`Baseline written to ${out} (${scan.entries.length} files)\n`);
+          return 0;
+        }
+        if (action === "verify") {
+          const baselinePath = flagString(flags, "baseline");
+          if (!baselinePath) throw new UsageError("baseline verify requires --baseline <file>");
+          const baseline = JSON.parse(await readFile(baselinePath, "utf8")) as Parameters<typeof verifyBaseline>[0];
+          const scan = await scanDirectory(target, flagNumber(flags, "max-files", 200, 1, 1000));
+          const diff = verifyBaseline(baseline, scan.entries);
+          const format = flagString(flags, "format", "json");
+          const rendered = format === "md" || format === "markdown" ? baselineDiffToMarkdown(diff) : JSON.stringify(diff, null, 2);
+          process.stdout.write(rendered + "\n");
+          return diff.added.length + diff.removed.length + diff.changed.length > 0 ? 1 : 0;
+        }
+        throw new UsageError("usage: reverso baseline create|verify <dir>");
+      }
+
+      case "case": {
+        const action = positional[1];
+        if (action === "create") {
+          const name = positional[2];
+          if (!name) throw new UsageError("case create requires a name");
+          const out = flagString(flags, "out", "case.json")!;
+          const current = createCase(name);
+          await writeFile(out, JSON.stringify(current, null, 2));
+          process.stdout.write(`Case written to ${out}\n`);
+          return 0;
+        }
+        if (action === "add" || action === "report") {
+          const casePath = positional[2];
+          if (!casePath) throw new UsageError("case add/report requires a case file");
+          let current = JSON.parse(await readFile(casePath, "utf8")) as Case;
+          if (action === "add") {
+            const target = positional[3];
+            if (!target) throw new UsageError("case add requires a target file");
+            current = await addEvidence(current, target, flagString(flags, "notes"));
+            await writeFile(casePath, JSON.stringify(current, null, 2));
+            process.stdout.write(`Evidence added: ${target}\n`);
+            return 0;
+          }
+          const format = flagString(flags, "format", "json");
+          process.stdout.write((format === "md" || format === "markdown" ? caseToMarkdown(current) : JSON.stringify(current, null, 2)) + "\n");
+          return 0;
+        }
+        throw new UsageError("usage: reverso case create|add|report ...");
       }
 
       case "pcap": {

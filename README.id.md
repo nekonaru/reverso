@@ -75,6 +75,9 @@ analyzer di browser, HTTP API dan MCP jarak jauh, lihat
 | **Inventaris arsip** | Daftar entri ZIP/APK/IPA/JAR dengan ukuran, metode kompresi, flag enkripsi, deteksi tipe dan penandaan entri mencurigakan |
 | **Pencocokan aturan** | `reverso match` memakai rule pack bawaan YARA-lite (atau pack JSON sendiri) dengan kondisi aman: label, `N of them`, `and/or/not`, `filesize` dan `entropy` |
 | **Fuzzy hash** | `reverso fuzzy` menghasilkan hash piecewise bergaya ssdeep; `reverso diff` menambahkan skor kemiripan 0 sampai 100 |
+| **Baseline** | `reverso baseline create/verify` menyimpan hash file dan mendeteksi file baru, hilang dan berubah |
+| **Kasus** | `reverso case create/add/report` menyimpan evidence, hash dan catatan dalam satu file kasus JSON |
+| **Ekspor laporan** | SARIF untuk CI, CSV untuk spreadsheet dan HTML mandiri untuk dibagikan, selain JSON dan Markdown |
 | **Inventaris versi dan dependensi** | Version info, delay import dan path PDB pada PE; library yang dibutuhkan, RPATH/RUNPATH dan jumlahan relokasi pada ELF; dylib dan rpath pada Mach-O |
 | **Sinyal packer** | Deteksi tanda tangan dan stub UPX, plus heuristik region entropy tinggi |
 
@@ -315,7 +318,7 @@ node scripts/verify.mjs   # pipeline penuh (typecheck, coverage, build, audit)
 
 | Cek | Syarat |
 | --- | --- |
-| Unit dan integration test | Semua pass (176 test) |
+| Unit dan integration test | Semua pass (189 test) |
 | Line coverage | Minimal 70% |
 | Branch coverage | Minimal 60% |
 | Type check | `tsc --noEmit`, nol error |
