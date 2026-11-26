@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.7.0
+
+Pencocokan aturan, kemiripan fuzzy dan inventaris build yang lebih dalam, semuanya native.
+
+### Fitur baru
+
+- **Rule engine YARA-lite.** `reverso match` memakai pack bawaan (atau pack JSON lewat `--rules`) dengan pola hex, teks dan regex. Kondisi mendukung label, `N of them`, `and/or/not`, tanda kurung, `filesize` dan `entropy`, diurai interpreter kecil yang aman, bukan `eval`.
+- **Fuzzy hash.** `reverso fuzzy` menghasilkan hash piecewise bergaya ssdeep. `reverso diff` melaporkan skor kemiripan 0 sampai 100 dan kedua hash.
+- **Version info PE.** Versi file dan produk diekstrak dari resource `VS_VERSIONINFO` UTF-16 saat tersedia.
+- **Inventaris relokasi dan dependensi ELF.** `DT_NEEDED`, `DT_RPATH`, `DT_RUNPATH` dan jumlah REL/RELA dilaporkan.
+- **Dylib dan rpath Mach-O.** Load command untuk dynamic library dan rpath diurai menjadi daftar yang terbaca.
+
+### Peningkatan
+
+- `reverso rules list` menampilkan pack bawaan; `reverso match` mendukung output JSON dan Markdown.
+- Dua MCP tool baru, `reverso_match` dan `reverso_fuzzy`, plus dukungan di browser dan HTTP API.
+
 ## v1.6.0
 
 Pemeriksaan native lebih dalam untuk dependensi dinamis, path build dan binary universal. Diaudit terhadap binary Windows nyata.

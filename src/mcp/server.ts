@@ -19,6 +19,9 @@ import { parseDex } from "../inspect/dex.js";
 
 import { parsePcap } from "../inspect/pcap.js";
 import { decodeJwt } from "../inspect/jwt.js";
+import { DEFAULT_RULES } from "../rules/defaults.js";
+import { parseRulePack, matchRules } from "../rules/engine.js";
+import { fuzzyHash, fuzzySimilarity } from "../inspect/fuzzy.js";
 
 const MCP_PROTOCOL_VERSION = "2025-06-18";
 const MAX_MCP_FILE_BYTES = 64 * 1024 * 1024;
@@ -224,6 +227,41 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         // Not a readable file: treat the argument as the token itself.
       }
       return decodeJwt(trimmed);
+    },
+  },
+  {
+    name: "reverso_match",
+    description: "Apply the built-in YARA-lite rule pack, or a custom rule pack supplied as JSON, to a file. Returns matched rules and pattern labels. Returns JSON.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        rulesJson: { type: "string", description: "Optional custom rule pack JSON (array or {rules: [...]})" },
+      },
+    },
+    handler: async (args) => {
+      const buf = await readInput(args);
+      const rulesJson = args["rulesJson"];
+      const rules = typeof rulesJson === "string" && rulesJson.trim()
+        ? parseRulePack(JSON.parse(rulesJson))
+        : DEFAULT_RULES;
+      const matches = matchRules(rules, buf);
+      return { total: matches.length, matched: matches.filter((match) => match.matched).map((m) => m.id), matches };
+    },
+  },
+  {
+    name: "reverso_fuzzy",
+    description: "Compute a native fuzzy hash for a file. Pass contentB (base64) to compare and get a 0-100 similarity score. Returns JSON.",
+    inputSchema: {
+      type: "object",
+      properties: { contentB: { type: "string", description: "Optional base64 content of the second file" } },
+    },
+    handler: async (args) => {
+      const a = fuzzyHash(await readInput(args));
+      const contentB = args["contentB"];
+      if (typeof contentB !== "string" || !contentB) return a;
+      const bBytes = Buffer.from(contentB, "base64");
+      const b = fuzzyHash(new Uint8Array(bBytes));
+      return { ...a, otherHash: b.hash, similarity: fuzzySimilarity(a.hash, b.hash) };
     },
   },
   {

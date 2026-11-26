@@ -20,5 +20,8 @@ export { parseWasm } from "./inspect/wasm.js";
 export { parseDex } from "./inspect/dex.js";
 export { parsePcap } from "./inspect/pcap.js";
 export { decodeJwt } from "./inspect/jwt.js";
+export { fuzzyHash, fuzzySimilarity } from "./inspect/fuzzy.js";
+export { DEFAULT_RULES } from "./rules/defaults.js";
+export { parseRule, parseRulePack, matchRule, matchRules } from "./rules/engine.js";
 export { scanDirectory, scanReportToMarkdown } from "./inspect/scan.js";
 export { diffBuffers, diffReportToMarkdown } from "./inspect/diff.js";

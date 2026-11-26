@@ -34,7 +34,7 @@ describe("MCP server", () => {
     expect(response?.result).toEqual({});
   });
 
-  it("lists all 16 tools", async () => {
+  it("lists all 18 tools", async () => {
     const response = await rpc("tools/list");
     const result = response?.result as { tools: Array<{ name: string }> };
     const names = result.tools.map((t) => t.name);
@@ -55,8 +55,10 @@ describe("MCP server", () => {
       "reverso_hex",
       "reverso_pcap",
       "reverso_jwt",
+      "reverso_match",
+      "reverso_fuzzy",
     ]));
-    expect(result.tools).toHaveLength(16);
+    expect(result.tools).toHaveLength(18);
   });
 
   it("runs tools/call reverso_format on a file", async () => {
@@ -127,6 +129,23 @@ describe("MCP server", () => {
     const payload = JSON.parse(result.content[0]!.text);
     expect(payload.algorithm).toBe("HS256");
     expect(payload.signatureVerified).toBe(false);
+  });
+
+  it("runs tools/call reverso_match on inline content", async () => {
+    const content = Buffer.from("UPX! packed data").toString("base64");
+    const response = await rpc("tools/call", { name: "reverso_match", arguments: { content } });
+    const result = response?.result as { content: Array<{ text: string }> };
+    const payload = JSON.parse(result.content[0]!.text);
+    expect(payload.matched).toContain("packer-upx");
+  });
+
+  it("runs tools/call reverso_fuzzy with two contents", async () => {
+    const a = Buffer.from("common data ".repeat(50)).toString("base64");
+    const b = Buffer.from("common data ".repeat(50)).toString("base64");
+    const response = await rpc("tools/call", { name: "reverso_fuzzy", arguments: { content: a, contentB: b } });
+    const result = response?.result as { content: Array<{ text: string }> };
+    const payload = JSON.parse(result.content[0]!.text);
+    expect(payload.similarity).toBe(100);
   });
 
   it("runs tools/call reverso_pcap on a capture", async () => {

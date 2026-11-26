@@ -25,10 +25,13 @@ import { parseWasm } from "./inspect/wasm.js";
 import { parseDex } from "./inspect/dex.js";
 import { parsePcap } from "./inspect/pcap.js";
 import { decodeJwt } from "./inspect/jwt.js";
+import { DEFAULT_RULES } from "./rules/defaults.js";
+import { parseRulePack, matchRules } from "./rules/engine.js";
+import { fuzzyHash, fuzzySimilarity } from "./inspect/fuzzy.js";
 
 export { VERSION };
 
-const ANALYZERS = ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js", "scan", "diff", "find-bytes", "wasm", "dex", "pcap", "jwt", "hex"] as const;
+const ANALYZERS = ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js", "scan", "diff", "find-bytes", "wasm", "dex", "pcap", "jwt", "match", "rules", "fuzzy", "hex"] as const;
 const COMMANDS = [...ANALYZERS, "site", "mcp", "doctor", "capabilities", "help", "version"] as const;
 
 const USAGE = `reverso ${VERSION}
@@ -46,6 +49,9 @@ Commands:
   dex <file>          Inspect an Android DEX file
   pcap <file>         Inspect a classic PCAP capture (protocol stats)
   jwt <token|file>    Decode a JWT (header, payload, expiry; signature NOT verified)
+  match <file>        Apply the built-in rule pack (or --rules <file>) to a file
+  rules list          List the built-in rules
+  fuzzy <file>        Fuzzy hash a file (--compare <file> for similarity)
   analyze <file...>   Full static analysis report
   layout <file>       ELF/PE/Mach-O structure (sections, imports, exports)
   hardening <file>    Hardening checks (PIE, NX, ASLR, RELRO, CFG, ...)
@@ -78,6 +84,13 @@ Options (hex):
   --offset <n>        Byte offset to start from (default: 0)
   --length <n>        Bytes to dump (default: 256, max 65536)
   --width <n>         Bytes per line (default: 16, max 32)
+
+Options (match):
+  --rules <file>      Use a custom rule pack (JSON array or {rules: [...]})
+  --format <json|md>  Output format (default: json)
+
+Options (fuzzy):
+  --compare <file>    Compare against another file and report similarity
 
 Options (jwt):
   --file <path>       Read the token from a file instead of the argument
@@ -317,6 +330,40 @@ export async function run(argv: string[]): Promise<number> {
         const length = flagNumber(flags, "length", 256, 1, 65536);
         const width = flagNumber(flags, "width", 16, 1, 32);
         process.stdout.write(hexDump(buf, offset, length, width) + "\n");
+        return 0;
+      }
+
+      case "match": {
+        const file = positional[1];
+        if (!file) throw new UsageError("match requires a file");
+        const rulesPath = flagString(flags, "rules");
+        const rules = rulesPath ? parseRulePack(JSON.parse(await readFile(rulesPath, "utf8"))) : DEFAULT_RULES;
+        const matches = matchRules(rules, await readCapped(file));
+        const format = flagString(flags, "format", "json");
+        const body = format === "md" || format === "markdown"
+          ? `# Rule matches: ${file}\n\n` + matches.map((match) => `- **${match.name}** (${match.severity}): ${match.matched ? "matched" : "no match"}${match.error ? ` - ${match.error}` : ""}`).join("\n") + "\n"
+          : JSON.stringify({ file, matches, matched: matches.filter((match) => match.matched).map((match) => match.id) }, null, 2);
+        process.stdout.write(body + "\n");
+        return 0;
+      }
+
+      case "rules": {
+        if (positional[1] !== "list") throw new UsageError("usage: reverso rules list");
+        printJson(DEFAULT_RULES.map((rule) => ({ id: rule.id, name: rule.name, severity: rule.severity, tags: rule.tags ?? [], condition: rule.condition })));
+        return 0;
+      }
+
+      case "fuzzy": {
+        const file = positional[1];
+        if (!file) throw new UsageError("fuzzy requires a file");
+        const left = fuzzyHash(await readCapped(file));
+        const compare = flagString(flags, "compare");
+        const right = compare ? fuzzyHash(await readCapped(compare)) : null;
+        printJson({
+          file,
+          hash: left.hash,
+          ...(compare ? { compare, otherHash: right!.hash, similarity: fuzzySimilarity(left.hash, right!.hash) } : {}),
+        });
         return 0;
       }
 

@@ -73,6 +73,9 @@ For the in-browser analyzer, HTTP API and remote MCP service, see
 | **String intelligence** | ASCII and UTF-16LE strings, categorized as URLs, IPv4, emails, paths, JWTs, AWS keys, GitHub tokens, Slack tokens, Google API keys, private keys and assigned secrets |
 | **JavaScript analysis** | Minification detection, obfuscation score with indicators, framework fingerprints (webpack, React, Vue, Angular, Next.js, Vite, Svelte, jQuery), source map reference, URL and API endpoint extraction, secret scanning |
 | **Archive inventory** | ZIP/APK/IPA/JAR entry listing with sizes, compression method, encryption flags, type detection and suspicious entry flagging |
+| **Rule matching** | `reverso match` applies the built-in YARA-lite rule pack (or your own JSON pack) with safe conditions: labels, `N of them`, `and/or/not`, `filesize` and `entropy` |
+| **Fuzzy hashing** | `reverso fuzzy` computes an ssdeep-style piecewise hash; `reverso diff` adds a 0 to 100 similarity score |
+| **Version and dependency inventory** | PE version info, delay imports and PDB path; ELF needed libraries, RPATH/RUNPATH and relocation counts; Mach-O dylibs and rpaths |
 | **Packer signals** | UPX signature and stub detection, plus multi-region high entropy heuristic |
 
 ### Inspectors and utilities
@@ -313,7 +316,7 @@ node scripts/verify.mjs   # full pipeline (typecheck, coverage, build, audit)
 
 | Check | Requirement |
 | --- | --- |
-| Unit and integration tests | All pass (161 tests) |
+| Unit and integration tests | All pass (176 tests) |
 | Line coverage | At least 70% |
 | Branch coverage | At least 60% |
 | Type check | `tsc --noEmit`, zero errors |

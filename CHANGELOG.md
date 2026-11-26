@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.7.0
+
+Rule matching, fuzzy similarity and deeper build inventories, all native.
+
+### New features
+
+- **YARA-lite rule engine.** `reverso match` applies a built-in pack (or a JSON pack via `--rules`) with hex, text and regex patterns. Conditions support labels, `N of them`, `and/or/not`, parentheses, `filesize` and `entropy`, parsed by a small safe interpreter, never `eval`.
+- **Fuzzy hashing.** `reverso fuzzy` computes an ssdeep-style context-triggered hash. `reverso diff` reports a 0 to 100 similarity score and both hashes.
+- **PE version info.** File and product versions are extracted from UTF-16 `VS_VERSIONINFO` resources when present.
+- **ELF relocation and dependency inventory.** `DT_NEEDED`, `DT_RPATH`, `DT_RUNPATH` and REL/RELA counts are reported.
+- **Mach-O dylibs and rpaths.** Load commands for dynamic libraries and rpaths are decoded into readable lists.
+
+### Improvements
+
+- `reverso rules list` prints the built-in pack; `reverso match` supports JSON and Markdown output.
+- Two new MCP tools, `reverso_match` and `reverso_fuzzy`, plus browser and HTTP API support.
+
 ## v1.6.0
 
 Deeper native inspection of dynamic dependencies, build paths and universal binaries. Audited against real Windows binaries.

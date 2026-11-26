@@ -46,6 +46,7 @@ export interface PeInfo {
   imphash: string | null;
   pdbPath: string | null;
   debugDirectories: number;
+  versionInfo: { fileVersion: string; productVersion: string } | null;
   authenticode: { sha1: string; sha256: string };
   rich: PeRichInfo | null;
   overlay: PeOverlay | null;
@@ -364,6 +365,7 @@ export function parsePe(buf: Uint8Array): PeInfo {
 
   const certificateDir = dataDirectory(4);
   const clrDir = dataDirectory(14);
+  const versionInfo = parseVersionInfo(buf);
 
   // Import hash in the style popularised by malware clustering: md5 of
   // comma-joined, lowercased "dll.function" pairs in order of appearance.
@@ -412,6 +414,7 @@ export function parsePe(buf: Uint8Array): PeInfo {
     imphash,
     pdbPath,
     debugDirectories,
+    versionInfo,
     authenticode,
     rich,
     overlay,
@@ -503,6 +506,33 @@ function parseRichHeader(
     .update(compilers.map((c) => `${c.productId}.${c.buildNumber}.${c.count}`).join(","), "utf8")
     .digest("hex");
   return { key, compilers, richHash };
+}
+
+/** Extracts version numbers from a UTF-16 VS_VERSIONINFO resource when present. */
+function parseVersionInfo(buf: Uint8Array): { fileVersion: string; productVersion: string } | null {
+  const marker = new TextEncoder().encode("VS_VERSION_INFO".split("").join("\0") + "\0"); // UTF-16LE
+  let markerOffset = -1;
+  const limit = Math.min(buf.length, 16 * 1024 * 1024);
+  outer: for (let i = 0; i + marker.length <= limit; i++) {
+    for (let j = 0; j < marker.length; j++) {
+      if (buf[i + j] !== marker[j]) continue outer;
+    }
+    markerOffset = i;
+    break;
+  }
+  if (markerOffset === -1) return null;
+
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  for (let offset = markerOffset + marker.length; offset + 24 <= Math.min(buf.length, markerOffset + marker.length + 512); offset += 2) {
+    if (dv.getUint32(offset, true) !== 0xfeef04bd) continue; // VS_FIXEDFILEINFO signature
+    const format = (ms: number, ls: number): string =>
+      `${(ms >>> 16) & 0xffff}.${ms & 0xffff}.${(ls >>> 16) & 0xffff}.${ls & 0xffff}`;
+    return {
+      fileVersion: format(dv.getUint32(offset + 8, true), dv.getUint32(offset + 12, true)),
+      productVersion: format(dv.getUint32(offset + 16, true), dv.getUint32(offset + 20, true)),
+    };
+  }
+  return null;
 }
 
 function computeImphash(imports: PeImport[]): string | null {

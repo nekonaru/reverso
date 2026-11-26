@@ -151,4 +151,22 @@ describe("run", () => {
     const { code } = await captureStdout(() => run(["jwt", "not-a-token"]));
     expect(code).toBe(3);
   });
+
+  it("lists built-in rules", async () => {
+    const { code, output } = await captureStdout(() => run(["rules", "list"]));
+    expect(code).toBe(0);
+    expect(JSON.parse(output).length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("matches rules on a file", async () => {
+    const { code, output } = await captureStdout(() => run(["match", file]));
+    expect(code).toBe(0);
+    expect(JSON.parse(output).matches.length).toBeGreaterThan(0);
+  });
+
+  it("computes a fuzzy hash", async () => {
+    const { code, output } = await captureStdout(() => run(["fuzzy", file]));
+    expect(code).toBe(0);
+    expect(JSON.parse(output).hash).toMatch(/^\d+:/);
+  });
 });

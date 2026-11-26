@@ -22,6 +22,8 @@ export interface MachOInfo {
   hasCodeSignature: boolean;
   hasEntryPoint: boolean;
   uuid: string | null;
+  dylibs: string[];
+  rpaths: string[];
   fatSlices: Array<{
     cpuType: number;
     cpuSubtype: number;
@@ -65,6 +67,8 @@ const LC_ENCRYPTION_INFO = 0x21;
 const LC_ENCRYPTION_INFO_64 = 0x2c;
 const LC_CODE_SIGNATURE = 0x1d;
 const LC_UUID = 0x1b;
+const LC_RPATH = 0x8000001c;
+const DYLIB_COMMANDS = new Set([0x0c, 0x18, 0x20, 0x80000018, 0x8000001f, 0x80000023]);
 const LC_SEGMENT = 0x1;
 const LC_SEGMENT_64 = 0x19;
 
@@ -127,6 +131,8 @@ export function parseMachO(buf: Uint8Array, depth = 0): MachOInfo {
       hasCodeSignature: false,
       hasEntryPoint: false,
       uuid: null,
+      dylibs: [],
+      rpaths: [],
     };
   }
 
@@ -150,6 +156,8 @@ export function parseMachO(buf: Uint8Array, depth = 0): MachOInfo {
   let hasCodeSignature = false;
   let hasEntryPoint = false;
   let uuid: string | null = null;
+  const dylibs: string[] = [];
+  const rpaths: string[] = [];
   for (let i = 0; i < Math.min(ncmds, 256); i++) {
     if (offset + 8 > buf.length) break;
     const cmd = u32(offset);
@@ -187,6 +195,21 @@ export function parseMachO(buf: Uint8Array, depth = 0): MachOInfo {
         const bytes = [...buf.subarray(offset + 8, offset + 24)];
         uuid = formatUuid(bytes);
       }
+    } else if (DYLIB_COMMANDS.has(cmd) || cmd === LC_RPATH) {
+      const strOffset = u32(offset + 8);
+      const start = offset + strOffset;
+      if (strOffset >= 8 && start < buf.length) {
+        let value = "";
+        for (let i = start; i < Math.min(start + 1024, buf.length); i++) {
+          const b = buf[i]!;
+          if (b === 0) break;
+          value += b >= 0x20 && b <= 0x7e ? String.fromCharCode(b) : ".";
+        }
+        if (value) {
+          if (cmd === LC_RPATH) rpaths.push(value);
+          else dylibs.push(value);
+        }
+      }
     } else if (cmd === LC_MAIN) {
       hasEntryPoint = true;
     }
@@ -214,6 +237,8 @@ export function parseMachO(buf: Uint8Array, depth = 0): MachOInfo {
     hasCodeSignature,
     hasEntryPoint,
     uuid,
+    dylibs,
+    rpaths,
     fatSlices: [],
   };
 }

@@ -49,6 +49,9 @@ export function reportToMarkdown(report: AnalysisReport): string {
     if (elf.needed.length > 0) lines.push(`- **Needed libraries:** ${elf.needed.join(", ")}`);
     if (elf.rpath) lines.push(`- **RPATH:** ${elf.rpath}`);
     if (elf.runpath) lines.push(`- **RUNPATH:** ${elf.runpath}`);
+    if (elf.relocations.rel > 0 || elf.relocations.rela > 0) {
+      lines.push(`- **Relocations:** ${elf.relocations.rel} REL, ${elf.relocations.rela} RELA`);
+    }
     lines.push(`- **Sections:** ${elf.sections.length}, program headers: ${elf.programHeaders.length}`);
     if (elf.definedSymbols.length > 0) lines.push(`- **Defined dynamic symbols:** ${elf.definedSymbols.length}`);
     if (elf.undefinedSymbols.length > 0) lines.push(`- **Undefined dynamic symbols:** ${elf.undefinedSymbols.join(", ").slice(0, 400)}`);
@@ -68,6 +71,7 @@ export function reportToMarkdown(report: AnalysisReport): string {
     lines.push(`- **Sections:** ${pe.sections.map((s) => s.name).join(", ") || "none"}`);
     if (pe.imphash) lines.push(`- **ImpHash:** \`${pe.imphash}\``);
     if (pe.pdbPath) lines.push(`- **PDB path:** ${pe.pdbPath}`);
+    if (pe.versionInfo) lines.push(`- **Version info:** file ${pe.versionInfo.fileVersion}, product ${pe.versionInfo.productVersion}`);
     if (pe.delayImports.length > 0) {
       lines.push(`- **Delay imports:** ${pe.delayImports.map((i) => i.dll).join(", ")}`);
     }
@@ -98,6 +102,8 @@ export function reportToMarkdown(report: AnalysisReport): string {
     }
     lines.push(`- **Segments:** ${macho.segments.map((s) => s.name).join(", ") || "none"}`);
     if (macho.uuid) lines.push(`- **UUID:** \`${macho.uuid}\``);
+    if (macho.dylibs.length > 0) lines.push(`- **Dylibs:** ${macho.dylibs.join(", ")}`);
+    if (macho.rpaths.length > 0) lines.push(`- **RPaths:** ${macho.rpaths.join(", ")}`);
     lines.push(`- **Encrypted:** ${macho.encrypted ? "yes" : "no"}, code signature: ${macho.hasCodeSignature ? "yes" : "no"}`);
     lines.push("");
   }
