@@ -205,4 +205,15 @@ describe("run", () => {
     expect(code).toBe(0);
     expect(output).toContain("file,format,sizeBytes,entropy,sha256,packerSignals");
   });
+
+  it("runs the new format inspectors", async () => {
+    const pdf = await captureStdout(() => run(["pdf", file]));
+    expect(pdf.code).toBe(0);
+    expect(JSON.parse(pdf.output).version).toBeNull();
+    const evm = await captureStdout(() => run(["evm", "0x60016000"]));
+    expect(evm.code).toBe(0);
+    expect(JSON.parse(evm.output).instructions.length).toBeGreaterThan(0);
+    const lnk = await captureStdout(() => run(["lnk", file]));
+    expect(lnk.code).toBe(3);
+  });
 });

@@ -22,6 +22,12 @@ import { decodeJwt } from "../inspect/jwt.js";
 import { DEFAULT_RULES } from "../rules/defaults.js";
 import { parseRulePack, matchRules } from "../rules/engine.js";
 import { fuzzyHash, fuzzySimilarity } from "../inspect/fuzzy.js";
+import { parsePdf } from "../inspect/pdf.js";
+import { parsePyInstaller } from "../inspect/pyinstaller.js";
+import { parseLnk } from "../inspect/lnk.js";
+import { parseEvm } from "../inspect/evm.js";
+import { parseDotNet } from "../inspect/dotnet.js";
+import { parseOoxml } from "../node/ooxml.js";
 
 const MCP_PROTOCOL_VERSION = "2025-06-18";
 const MAX_MCP_FILE_BYTES = 64 * 1024 * 1024;
@@ -263,6 +269,50 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       const b = fuzzyHash(new Uint8Array(bBytes));
       return { ...a, otherHash: b.hash, similarity: fuzzySimilarity(a.hash, b.hash) };
     },
+  },
+  {
+    name: "reverso_pdf",
+    description: "Static PDF structure inspection: objects, encryption, JavaScript, OpenAction, embedded files, URIs and metadata. Returns JSON.",
+    inputSchema: { type: "object", properties: {} },
+    handler: async (args) => parsePdf(await readInput(args)),
+  },
+  {
+    name: "reverso_pyinstaller",
+    description: "Inspect a PyInstaller onefile CArchive: cookie, Python version and table of contents. Returns JSON.",
+    inputSchema: { type: "object", properties: {} },
+    handler: async (args) => parsePyInstaller(await readInput(args)),
+  },
+  {
+    name: "reverso_lnk",
+    description: "Inspect a Windows .lnk shortcut: flags, target path, arguments, working directory and timestamps. Returns JSON.",
+    inputSchema: { type: "object", properties: {} },
+    handler: async (args) => parseLnk(await readInput(args)),
+  },
+  {
+    name: "reverso_evm",
+    description: "Disassemble EVM bytecode from inline hex content or a text file. Returns JSON.",
+    inputSchema: {
+      type: "object",
+      properties: { token: { type: "string", description: "Hex bytecode, or a path to a file containing it" } },
+    },
+    handler: async (args) => {
+      const token = args["token"];
+      if (typeof token !== "string" || !token.trim()) throw new Error("Missing required string argument: token");
+      if (/^(0x)?[0-9a-f]+$/i.test(token.trim())) return parseEvm(token);
+      return parseEvm((await readCapped(token.trim())).toString());
+    },
+  },
+  {
+    name: "reverso_dotnet",
+    description: "Inspect a .NET assembly's CLI metadata streams and string samples. Returns JSON.",
+    inputSchema: { type: "object", properties: {} },
+    handler: async (args) => parseDotNet(await readInput(args)),
+  },
+  {
+    name: "reverso_ooxml",
+    description: "Inspect a DOCX, XLSX or PPTX file: kind, external relationships, VBA presence and document text. Returns JSON.",
+    inputSchema: { type: "object", properties: {} },
+    handler: async (args) => parseOoxml(await readInput(args)),
   },
   {
     name: "reverso_find_bytes",

@@ -34,7 +34,7 @@ describe("MCP server", () => {
     expect(response?.result).toEqual({});
   });
 
-  it("lists all 18 tools", async () => {
+  it("lists all 24 tools", async () => {
     const response = await rpc("tools/list");
     const result = response?.result as { tools: Array<{ name: string }> };
     const names = result.tools.map((t) => t.name);
@@ -57,8 +57,14 @@ describe("MCP server", () => {
       "reverso_jwt",
       "reverso_match",
       "reverso_fuzzy",
+      "reverso_pdf",
+      "reverso_pyinstaller",
+      "reverso_lnk",
+      "reverso_evm",
+      "reverso_dotnet",
+      "reverso_ooxml",
     ]));
-    expect(result.tools).toHaveLength(18);
+    expect(result.tools).toHaveLength(24);
   });
 
   it("runs tools/call reverso_format on a file", async () => {

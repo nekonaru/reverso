@@ -18,12 +18,18 @@ import { diffBuffers } from "../inspect/diff.js";
 import { DEFAULT_RULES } from "../rules/defaults.js";
 import { parseRulePack, matchRules } from "../rules/engine.js";
 import { fuzzyHash, fuzzySimilarity } from "../inspect/fuzzy.js";
+import { parsePdf } from "../inspect/pdf.js";
+import { parsePyInstaller } from "../inspect/pyinstaller.js";
+import { parseLnk } from "../inspect/lnk.js";
+import { parseEvm } from "../inspect/evm.js";
+import { parseDotNet } from "../inspect/dotnet.js";
 
 const utf8Decoder = new TextDecoder("utf8");
 
 export type BrowserTool =
   | "analyze" | "format" | "entropy" | "strings" | "layout" | "hardening" | "archive"
-  | "js" | "wasm" | "dex" | "pcap" | "jwt" | "find-bytes" | "hex" | "diff" | "match" | "fuzzy";
+  | "js" | "wasm" | "dex" | "pcap" | "jwt" | "find-bytes" | "hex" | "diff" | "match" | "fuzzy"
+  | "pdf" | "pyinstaller" | "lnk" | "evm" | "dotnet";
 
 export interface BrowserRequest {
   tool: BrowserTool;
@@ -82,6 +88,11 @@ export function runBrowserTool(request: BrowserRequest): unknown {
       const right = fuzzyHash(request.otherBytes);
       return { ...left, otherHash: right.hash, similarity: fuzzySimilarity(left.hash, right.hash) };
     }
+    case "pdf": return parsePdf(bytes);
+    case "pyinstaller": return parsePyInstaller(bytes);
+    case "lnk": return parseLnk(bytes);
+    case "evm": return parseEvm(arg ?? bytes);
+    case "dotnet": return parseDotNet(bytes);
     default:
       throw new Error(`Unknown tool: ${request.tool as string}`);
   }
