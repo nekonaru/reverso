@@ -130,6 +130,9 @@ if (toolSelect instanceof HTMLSelectElement && fileInput instanceof HTMLInputEle
         label: first.label,
         arg: patternInput instanceof HTMLInputElement ? patternInput.value.trim() : "",
       };
+      if (request.tool === "evm") {
+        request.arg = new TextDecoder().decode(first.bytes).trim();
+      }
       if (request.tool === "diff" || request.tool === "fuzzy") {
         const second = await readFile(file2Input);
         request.otherBytes = second.bytes;

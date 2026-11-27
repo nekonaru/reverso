@@ -38,6 +38,7 @@ export interface WasmInfo {
   };
   memories: WasmMemory[];
   names: { module: string | null; functions: Array<{ index: number; name: string }> };
+  producers: Record<string, string[]>;
 }
 
 const SECTION_NAMES: Record<number, string> = {
@@ -95,6 +96,7 @@ export function parseWasm(buf: Uint8Array): WasmInfo {
     counts: { functions: 0, tables: 0, memories: 0, globals: 0, dataSegments: 0, elementSegments: 0 },
     memories: [],
     names: { module: null, functions: [] },
+    producers: {},
   };
 
   let pos = 8;
@@ -139,9 +141,10 @@ function parseSection(id: number, buf: Uint8Array, start: number, end: number, i
   };
 
   switch (id) {
-    case 0: { // custom: try the "name" section
+    case 0: { // custom: name section and producers metadata
       const name = readNameHere();
       if (name === "name") parseNameSection(buf, pos, end, info);
+      else if (name === "producers") parseProducers(buf, pos, end, info);
       return;
     }
     case 1: { // type
@@ -229,6 +232,30 @@ function parseSection(id: number, buf: Uint8Array, start: number, end: number, i
     }
     default:
       return; // start, datacount, tag, future sections: size is already known, skip.
+  }
+}
+
+function parseProducers(buf: Uint8Array, start: number, end: number, info: WasmInfo): void {
+  let pos = start;
+  while (pos < end) {
+    const subsectionId = buf[pos]!;
+    pos += 1;
+    const [size, afterSize] = readUleb(buf, pos);
+    pos = afterSize;
+    const subEnd = pos + size;
+    if (subEnd > end) break;
+    const [count, afterCount] = readUleb(buf, pos);
+    pos = afterCount;
+    const key = subsectionId === 0 ? "languages" : subsectionId === 1 ? "tools" : `subsection-${subsectionId}`;
+    const values: string[] = [];
+    for (let i = 0; i < Math.min(count, 50); i++) {
+      const [name, afterName] = readName(buf, pos);
+      const [version, afterVersion] = readName(buf, afterName);
+      values.push(version ? `${name}@${version}` : name);
+      pos = afterVersion;
+    }
+    info.producers[key] = values;
+    pos = subEnd;
   }
 }
 

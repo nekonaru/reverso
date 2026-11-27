@@ -1,5 +1,25 @@
 # Changelog
 
+## v2.1.0
+
+Six new native format inspectors, plus richer PCAP and WebAssembly details.
+
+### New features
+
+- **PDF inspector.** `reverso pdf` reports objects, encryption, JavaScript, OpenAction, embedded files, URIs and metadata without rendering the document.
+- **OOXML inspector.** `reverso ooxml` detects DOCX, XLSX and PPTX, external relationships, VBA projects and document text.
+- **PyInstaller inspector.** `reverso pyinstaller` decodes the CArchive cookie, Python version and table of contents.
+- **Windows shortcut inspector.** `reverso lnk` reports flags, attributes, target paths, arguments, working directory and timestamps.
+- **DotNet inspector.** `reverso dotnet` reads CLI metadata streams and string samples from managed assemblies.
+- **EVM disassembler.** `reverso evm` decodes opcodes and collects PUSH4 selector candidates from hex bytecode or a file.
+- **PCAP enrichment.** DNS query names and HTTP request lines are now extracted from captures.
+- **WASM producers.** The custom `producers` section is decoded into language and tool entries.
+
+### Improvements
+
+- Six new MCP tools (`reverso_pdf`, `reverso_ooxml`, `reverso_pyinstaller`, `reverso_lnk`, `reverso_dotnet`, `reverso_evm`) bringing the total to 24.
+- Five of the new inspectors also run in the browser and over the HTTP API. OOXML is Node only because it needs zlib.
+
 ## v2.0.0
 
 Milestone release: a versioned report schema, a job based public API and hardened hosted operation.

@@ -31,10 +31,16 @@ import { fuzzyHash, fuzzySimilarity } from "./inspect/fuzzy.js";
 import { createBaseline, verifyBaseline, baselineDiffToMarkdown } from "./inspect/baseline.js";
 import { createCase, addEvidence, caseToMarkdown, type Case } from "./inspect/case.js";
 import { toSarif, toHtml, scanToCsv } from "./inspect/exports.js";
+import { parsePdf } from "./inspect/pdf.js";
+import { parsePyInstaller } from "./inspect/pyinstaller.js";
+import { parseLnk } from "./inspect/lnk.js";
+import { parseEvm } from "./inspect/evm.js";
+import { parseDotNet } from "./inspect/dotnet.js";
+import { parseOoxml } from "./node/ooxml.js";
 
 export { VERSION };
 
-const ANALYZERS = ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js", "scan", "diff", "find-bytes", "wasm", "dex", "pcap", "jwt", "match", "rules", "fuzzy", "baseline", "case", "hex"] as const;
+const ANALYZERS = ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js", "scan", "diff", "find-bytes", "wasm", "dex", "pcap", "jwt", "match", "rules", "fuzzy", "baseline", "case", "pdf", "pyinstaller", "lnk", "evm", "dotnet", "ooxml", "hex"] as const;
 const COMMANDS = [...ANALYZERS, "site", "mcp", "doctor", "capabilities", "help", "version"] as const;
 
 const USAGE = `reverso ${VERSION}
@@ -57,6 +63,12 @@ Commands:
   fuzzy <file>        Fuzzy hash a file (--compare <file> for similarity)
   baseline <action>   create|verify a directory baseline (integrity check)
   case <action>       create|add|report an investigation case
+  pdf <file>          Static PDF structure and embedded content inventory
+  pyinstaller <file>  PyInstaller CArchive cookie and table of contents
+  lnk <file>          Windows shortcut target, arguments and timestamps
+  evm <hex|file>      EVM bytecode disassembler and PUSH4 candidates
+  dotnet <file>       DotNet metadata streams and strings
+  ooxml <file>        DOCX/XLSX/PPTX structure, external links and text
   analyze <file...>   Full static analysis report
   layout <file>       ELF/PE/Mach-O structure (sections, imports, exports)
   hardening <file>    Hardening checks (PIE, NX, ASLR, RELRO, CFG, ...)
@@ -447,6 +459,74 @@ export async function run(argv: string[]): Promise<number> {
           return 0;
         }
         throw new UsageError("usage: reverso case create|add|report ...");
+      }
+
+      case "pdf": {
+        const file = positional[1];
+        if (!file) throw new UsageError("pdf requires a file");
+        printJson(parsePdf(await readCapped(file)));
+        return 0;
+      }
+
+      case "pyinstaller": {
+        const file = positional[1];
+        if (!file) throw new UsageError("pyinstaller requires a file");
+        try {
+          printJson(parsePyInstaller(await readCapped(file)));
+        } catch (error) {
+          process.stderr.write(`Not a PyInstaller archive: ${(error as Error).message}\n`);
+          return 3;
+        }
+        return 0;
+      }
+
+      case "lnk": {
+        const file = positional[1];
+        if (!file) throw new UsageError("lnk requires a file");
+        try {
+          printJson(parseLnk(await readCapped(file)));
+        } catch (error) {
+          process.stderr.write(`Not a shortcut: ${(error as Error).message}\n`);
+          return 3;
+        }
+        return 0;
+      }
+
+      case "evm": {
+        const input = positional[1];
+        if (!input) throw new UsageError("evm requires a hex string or a file path");
+        const looksHex = /^0x[0-9a-f]*$/i.test(input) || /^[0-9a-f]+$/i.test(input);
+        try {
+          printJson(parseEvm(looksHex ? input : (await readCapped(input)).toString()));
+        } catch (error) {
+          process.stderr.write(`Not EVM bytecode: ${(error as Error).message}\n`);
+          return 3;
+        }
+        return 0;
+      }
+
+      case "dotnet": {
+        const file = positional[1];
+        if (!file) throw new UsageError("dotnet requires a file");
+        try {
+          printJson(parseDotNet(await readCapped(file)));
+        } catch (error) {
+          process.stderr.write(`Not a .NET assembly: ${(error as Error).message}\n`);
+          return 3;
+        }
+        return 0;
+      }
+
+      case "ooxml": {
+        const file = positional[1];
+        if (!file) throw new UsageError("ooxml requires a file");
+        try {
+          printJson(parseOoxml(await readCapped(file)));
+        } catch (error) {
+          process.stderr.write(`Not an OOXML file: ${(error as Error).message}\n`);
+          return 3;
+        }
+        return 0;
       }
 
       case "pcap": {

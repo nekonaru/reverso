@@ -1,5 +1,25 @@
 # Changelog
 
+## v2.1.0
+
+Enam inspektor format native baru, plus detail PCAP dan WebAssembly yang lebih kaya.
+
+### Fitur baru
+
+- **Inspektor PDF.** `reverso pdf` melaporkan objek, enkripsi, JavaScript, OpenAction, file tertanam, URI dan metadata tanpa merender dokumen.
+- **Inspektor OOXML.** `reverso ooxml` mendeteksi DOCX, XLSX dan PPTX, relasi eksternal, proyek VBA dan teks dokumen.
+- **Inspektor PyInstaller.** `reverso pyinstaller` mengurai cookie CArchive, versi Python dan daftar isi.
+- **Inspektor shortcut Windows.** `reverso lnk` melaporkan flag, atribut, path target, argumen, working directory dan timestamp.
+- **Inspektor DotNet.** `reverso dotnet` membaca metadata stream CLI dan contoh string dari assembly managed.
+- **Disassembler EVM.** `reverso evm` mengurai opcode dan mengumpulkan kandidat selector PUSH4 dari bytecode hex atau file.
+- **Pengayaan PCAP.** Nama query DNS dan baris request HTTP kini diekstrak dari capture.
+- **Produsen WASM.** Custom section `producers` diurai menjadi entri bahasa dan tool.
+
+### Peningkatan
+
+- Enam MCP tool baru (`reverso_pdf`, `reverso_ooxml`, `reverso_pyinstaller`, `reverso_lnk`, `reverso_dotnet`, `reverso_evm`) sehingga total 24.
+- Lima inspektor baru juga berjalan di browser dan lewat HTTP API. OOXML khusus Node karena membutuhkan zlib.
+
 ## v2.0.0
 
 Rilis tonggak: schema laporan berversi, API publik berbasis pekerjaan dan pengoperasian hosted yang lebih keras.

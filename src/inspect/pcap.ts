@@ -24,6 +24,8 @@ export interface PcapInfo {
   topSources: PcapTopEntry[];
   topDestinations: PcapTopEntry[];
   topDstPorts: Array<{ port: number; protocol: string; packets: number }>;
+  dnsNames: string[];
+  httpRequests: string[];
 }
 
 const LINKTYPE_NAMES: Record<number, string> = {
@@ -98,11 +100,15 @@ export function parsePcap(buf: Uint8Array): PcapInfo {
     topSources: [],
     topDestinations: [],
     topDstPorts: [],
+    dnsNames: [],
+    httpRequests: [],
   };
 
   const sourceCount = new Map<string, number>();
   const destCount = new Map<string, number>();
   const portCount = new Map<string, number>();
+  const dnsNames: string[] = [];
+  const httpRequests: string[] = [];
   let firstTs: number | null = null;
   let lastTs: number | null = null;
   let payloadBytes = 0;
@@ -129,7 +135,7 @@ export function parsePcap(buf: Uint8Array): PcapInfo {
     info.bytes += origLen;
     payloadBytes += inclLen;
 
-    inspectPacket(packet, linkType, info, sourceCount, destCount, portCount);
+    inspectPacket(packet, linkType, info, sourceCount, destCount, portCount, dnsNames, httpRequests);
   }
 
   if (pos < buf.length && !info.truncated) info.truncated = true;
@@ -147,6 +153,8 @@ export function parsePcap(buf: Uint8Array): PcapInfo {
     const [protocol, port] = value.split("/", 2);
     return { port: Number(port), protocol: protocol!, packets };
   });
+  info.dnsNames = dnsNames.slice(0, 50);
+  info.httpRequests = httpRequests.slice(0, 50);
 
   return info;
 }
@@ -158,6 +166,8 @@ function inspectPacket(
   sourceCount: Map<string, number>,
   destCount: Map<string, number>,
   portCount: Map<string, number>,
+  dnsNames: string[],
+  httpRequests: string[],
 ): void {
   let offset = 0;
   let ethertype: number | null = null;
@@ -193,12 +203,12 @@ function inspectPacket(
   }
 
   if (ethertype === 0x0800) {
-    parseIpv4(packet, offset, info, sourceCount, destCount, portCount);
+    parseIpv4(packet, offset, info, sourceCount, destCount, portCount, dnsNames, httpRequests);
     return;
   }
 
   if (ethertype === 0x86dd) {
-    parseIpv6(packet, offset, info, sourceCount, destCount, portCount);
+    parseIpv6(packet, offset, info, sourceCount, destCount, portCount, dnsNames, httpRequests);
     return;
   }
 
@@ -212,6 +222,8 @@ function parseIpv4(
   sourceCount: Map<string, number>,
   destCount: Map<string, number>,
   portCount: Map<string, number>,
+  dnsNames: string[],
+  httpRequests: string[],
 ): void {
   if (buf.length < offset + 20) return bump(info.protocols, "malformed-ipv4");
   const versionIhl = buf[offset]!;
@@ -227,7 +239,7 @@ function parseIpv4(
   bump(sourceCount, src);
   bump(destCount, dst);
   bump(info.protocols, "ipv4");
-  parseTransport(buf, offset + ihl, protocol, info, portCount);
+  parseTransport(buf, offset + ihl, protocol, info, portCount, dnsNames, httpRequests);
 }
 
 function parseIpv6(
@@ -237,6 +249,8 @@ function parseIpv6(
   sourceCount: Map<string, number>,
   destCount: Map<string, number>,
   portCount: Map<string, number>,
+  dnsNames: string[],
+  httpRequests: string[],
 ): void {
   if (buf.length < offset + 40) return bump(info.protocols, "malformed-ipv6");
   if ((buf[offset]! >> 4) !== 6) return bump(info.protocols, "malformed-ipv6");
@@ -263,7 +277,7 @@ function parseIpv6(
   bump(sourceCount, src);
   bump(destCount, dst);
   bump(info.protocols, "ipv6");
-  parseTransport(buf, headerOffset, nextHeader, info, portCount);
+  parseTransport(buf, headerOffset, nextHeader, info, portCount, dnsNames, httpRequests);
 }
 
 function parseTransport(
@@ -272,6 +286,8 @@ function parseTransport(
   protocol: number,
   info: PcapInfo,
   portCount: Map<string, number>,
+  dnsNames: string[],
+  httpRequests: string[],
 ): void {
   const protoName = IP_PROTOCOL_NAMES[protocol] ?? `ipproto-${protocol}`;
   bump(info.protocols, protoName);
@@ -283,9 +299,41 @@ function parseTransport(
     bump(portCount, `${protoName}/${dstPort}`);
     if (dstPort === 80 || srcPort === 80) bump(info.protocols, "http");
     if (dstPort === 443 || srcPort === 443) bump(info.protocols, "tls");
-    if (dstPort === 53 || srcPort === 53) bump(info.protocols, "dns");
+    const isDns = dstPort === 53 || srcPort === 53;
+    if (isDns) bump(info.protocols, "dns");
     if (dstPort === 22 || srcPort === 22) bump(info.protocols, "ssh");
+
+    const headerLength = protocol === 6 ? ((buf[offset + 12]! >> 4) & 0xf) * 4 : 8;
+    const payload = buf.subarray(offset + headerLength);
+    if (isDns && dnsNames.length < 50) {
+      const name = parseDnsName(payload, protocol === 6);
+      if (name) dnsNames.push(name);
+    }
+    if ((dstPort === 80 || srcPort === 80) && httpRequests.length < 50) {
+      const text = new TextDecoder("latin1").decode(payload.subarray(0, Math.min(payload.length, 512)));
+      const firstLine = text.split("\r\n", 1)[0]?.trim() ?? "";
+      if (/^(GET|POST|PUT|HEAD|DELETE|OPTIONS|PATCH)\s+\S+/.test(firstLine)) httpRequests.push(firstLine);
+    }
   }
+}
+
+function parseDnsName(payload: Uint8Array, tcp: boolean): string | null {
+  const start = tcp ? 2 : 0;
+  if (payload.length < start + 12) return null;
+  const qdcount = (payload[start + 4]! << 8) | payload[start + 5]!;
+  if (qdcount === 0) return null;
+  let pos = start + 12;
+  const labels: string[] = [];
+  for (let hop = 0; hop < 40; hop++) {
+    if (pos >= payload.length) return null;
+    const length = payload[pos]!;
+    pos += 1;
+    if (length === 0) break;
+    if (pos + length > payload.length || length > 63) return null;
+    labels.push(new TextDecoder("latin1").decode(payload.subarray(pos, pos + length)));
+    pos += length;
+  }
+  return labels.length > 0 ? labels.join(".") : null;
 }
 
 function formatIpv4(buf: Uint8Array, offset: number): string {

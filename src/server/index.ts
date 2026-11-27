@@ -17,9 +17,10 @@ const RATE_WINDOW_MS = 60_000;
 const JOB_TTL_MS = 10 * 60_000;
 const MAX_JOBS = 200;
 const SITE_DIR = resolve(fileURLToPath(new URL("../../site/", import.meta.url)));
-const VALID_TOOLS = new Set<BrowserTool>([
+const VALID_TOOLS = new Set<BrowserTool | "ooxml">([
   "analyze", "format", "entropy", "strings", "layout", "hardening", "archive", "js",
   "wasm", "dex", "pcap", "jwt", "find-bytes", "hex", "diff", "match", "fuzzy",
+  "pdf", "pyinstaller", "lnk", "evm", "dotnet", "ooxml",
 ]);
 
 interface Job {

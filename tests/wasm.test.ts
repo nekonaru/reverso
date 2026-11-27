@@ -16,7 +16,8 @@ describe("parseWasm", () => {
     expect(info.counts.functions).toBe(1);
     expect(info.names.module).toBeNull();
     expect(info.names.functions).toEqual([{ index: 0, name: "main" }]);
-    expect(info.sections.map((s) => s.name)).toEqual(["type", "import", "function", "export", "code", "custom"]);
+    expect(info.producers).toEqual({ languages: ["Rust@1.75"] });
+    expect(info.sections.map((s) => s.name)).toEqual(["type", "import", "function", "export", "code", "custom", "custom"]);
   });
 
   it("rejects non-wasm input", () => {
