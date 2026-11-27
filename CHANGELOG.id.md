@@ -1,5 +1,23 @@
 # Changelog
 
+## v3.0.0
+
+Tonggak platform dan berbagi: laporan lebih aman, dokumentasi API yang bisa dibaca mesin dan resource MCP.
+
+### Fitur baru
+
+- **Redaksi secret.** `reverso analyze --redact` dan `?redact=1` pada API menyamarkan JWT, cloud key, token dan header private key dalam laporan yang dibagikan.
+- **Dokumen OpenAPI.** `GET /api/openapi.json` menjelaskan endpoint publik.
+- **Batch API.** `POST /api/batch` menganalisis hingga 20 input base64 dalam satu request.
+- **Resource MCP.** `resources/list` dan `resources/read` menyediakan rule pack, capabilities dan versi lewat URI `reverso://`.
+- **SBOM.** `npm run sbom` menghasilkan `sbom.json` bergaya CycloneDX dari lock file yang ter-commit.
+- **Threat model.** `docs/threat-model.md` mendokumentasikan batas, kontrol yang diterapkan dan risiko residual.
+- **Laporan HTML v3** menampilkan skor risiko dan alasannya di samping temuan lain.
+
+### Open: butuh akses akun
+
+- npm trusted publishing, image container publik dan deploy hosting. Semua konfigurasi sudah siap; pemilik perlu menghubungkan akun.
+
 ## v2.2.0
 
 Korelasi, penilaian dan efisiensi alur kerja untuk investigasi skala besar.

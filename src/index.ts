@@ -33,6 +33,7 @@ export { parseOoxml } from "./node/ooxml.js";
 export { clusterScan, clusterToMarkdown } from "./inspect/cluster.js";
 export { assessRisk } from "./inspect/risk.js";
 export { loadConfig } from "./config.js";
+export { redactReport } from "./inspect/redact.js";
 export { DEFAULT_RULES } from "./rules/defaults.js";
 export { parseRule, parseRulePack, matchRule, matchRules } from "./rules/engine.js";
 export { scanDirectory, scanReportToMarkdown } from "./inspect/scan.js";

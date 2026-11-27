@@ -506,6 +506,33 @@ export async function handleMessage(message: JsonRpcMessage): Promise<JsonRpcMes
         };
       case "ping":
         return { jsonrpc: "2.0", id, result: {} };
+      case "resources/list":
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            resources: [
+              { uri: "reverso://rules/default", name: "Built-in rule pack", mimeType: "application/json" },
+              { uri: "reverso://capabilities", name: "Reverso capabilities", mimeType: "application/json" },
+              { uri: "reverso://version", name: "Reverso version", mimeType: "application/json" },
+            ],
+          },
+        };
+      case "resources/read": {
+        const uri = message.params?.["uri"];
+        if (typeof uri !== "string" || !uri.startsWith("reverso://")) {
+          return errorResponse(id, -32602, "Unsupported resource URI");
+        }
+        const text = uri === "reverso://rules/default"
+          ? JSON.stringify(DEFAULT_RULES, null, 2)
+          : uri === "reverso://capabilities"
+            ? JSON.stringify({ tools: TOOL_DEFINITIONS.map((tool) => tool.name), version: VERSION }, null, 2)
+            : uri === "reverso://version"
+              ? JSON.stringify({ version: VERSION }, null, 2)
+              : null;
+        if (text === null) return errorResponse(id, -32602, `Unknown resource: ${uri}`);
+        return { jsonrpc: "2.0", id, result: { contents: [{ uri, mimeType: "application/json", text }] } };
+      }
       case "tools/list":
         return { jsonrpc: "2.0", id, result: toolList() };
       case "tools/call": {

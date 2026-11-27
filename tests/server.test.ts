@@ -126,6 +126,36 @@ describe("online HTTP service", () => {
     expect(followUp.status).toBe(200);
   });
 
+  it("serves an OpenAPI document", async () => {
+    const response = await fetch(`${base}/api/openapi.json`);
+    const body = await response.json();
+    expect(body.openapi).toBe("3.0.3");
+    expect(body.paths["/api/batch"]).toBeTruthy();
+  });
+
+  it("accepts a batch of base64 inputs", async () => {
+    const content = Buffer.from("hello batch").toString("base64");
+    const response = await fetch(`${base}/api/batch`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tool: "entropy", items: [{ label: "a.txt", content }] }),
+    });
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.count).toBe(1);
+    expect(typeof body.results[0].result.entropy).toBe("number");
+  });
+
+  it("redacts secrets on request", async () => {
+    const data = `const a = "AKIAIOSFODNN7EXAMPLE";\n`;
+    const response = await fetch(`${base}/api/analyze?tool=analyze&redact=1&label=app.js`, {
+      method: "POST",
+      body: data,
+    });
+    const body = await response.json();
+    expect(JSON.stringify(body)).not.toContain("AKIAIOSFODNN7EXAMPLE");
+  });
+
   it("applies a deterministic rate limit helper", async () => {
     const { checkRateLimit } = await import("../src/server/index.js");
     const map = new Map<string, { count: number; resetAt: number }>();

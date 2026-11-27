@@ -1,6 +1,6 @@
 {
   "name": "reverso",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "description": "Native-first reverse engineering toolkit: static binary, JavaScript bundle and web app analysis from a CLI or an MCP server.",
   "license": "MIT",
   "type": "module",
@@ -26,6 +26,7 @@
     "build:web": "node scripts/build-web.mjs",
     "postbuild": "node -e \"try{require('node:fs').chmodSync('dist/cli.js',0o755)}catch{}\"",
     "start": "node dist/server/index.js",
+    "sbom": "node scripts/generate-sbom.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

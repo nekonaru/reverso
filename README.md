@@ -224,6 +224,7 @@ Use `node dist/cli.js <command>` anywhere you would use `reverso <command>`.
 - Open the "Try Reverso online" section on the project website to analyze a file entirely in your browser, with no upload
 - Run `npm start` to serve the same site, a binary analysis API at `POST /api/analyze` and a stateless MCP endpoint at `POST /mcp`
 - Use `POST /api/jobs` for a pollable job id, `GET /api/rules` for the rule pack, and optional `REVERSO_API_KEY` plus request rate limits
+- Share reports safely with `--redact`; batch calls go to `POST /api/batch` and the endpoint spec to `GET /api/openapi.json`
 - Deploy the included `Dockerfile` or `render.yaml` blueprint on any free Node host; see [Using Reverso online](docs/online.md)
 
 ### Use Reverso from an MCP client
@@ -322,7 +323,7 @@ node scripts/verify.mjs   # full pipeline (typecheck, coverage, build, audit)
 
 | Check | Requirement |
 | --- | --- |
-| Unit and integration tests | All pass (210 tests) |
+| Unit and integration tests | All pass (215 tests) |
 | Line coverage | At least 70% |
 | Branch coverage | At least 60% |
 | Type check | `tsc --noEmit`, zero errors |

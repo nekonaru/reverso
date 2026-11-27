@@ -39,6 +39,7 @@ import { parseDotNet } from "./inspect/dotnet.js";
 import { parseOoxml } from "./node/ooxml.js";
 import { clusterScan, clusterToMarkdown } from "./inspect/cluster.js";
 import { loadConfig } from "./config.js";
+import { redactReport } from "./inspect/redact.js";
 
 export { VERSION };
 
@@ -94,6 +95,7 @@ Commands:
 Options (analyze):
   --format <json|md|sarif|html>  Output format (default: json)
   --out <file>        Write the report to a file instead of stdout
+  --redact            Mask secret-looking values before output
 
 Options (scan):
   --format <json|md|csv>  Output format (default: json)
@@ -241,13 +243,14 @@ export async function run(argv: string[]): Promise<number> {
         const out = flagString(flags, "out");
         const reports = [];
         for (const file of files) reports.push(await analyzeFile(file));
-        const payload = reports.length === 1 ? reports[0]! : reports;
+        const shared = flags.get("redact") === true ? reports.map(redactReport) : reports;
+        const payload = shared.length === 1 ? shared[0]! : shared;
         const rendered = format === "md" || format === "markdown"
-          ? reports.map(reportToMarkdown).join("\n\n---\n\n")
+          ? shared.map(reportToMarkdown).join("\n\n---\n\n")
           : format === "sarif"
-            ? JSON.stringify({ $schema: "https://json.schemastore.org/sarif-2.1.0.json", version: "2.1.0", runs: reports.map((report) => (toSarif(report) as { runs: unknown[] }).runs[0]) }, null, 2)
+            ? JSON.stringify({ $schema: "https://json.schemastore.org/sarif-2.1.0.json", version: "2.1.0", runs: shared.map((report) => (toSarif(report) as { runs: unknown[] }).runs[0]) }, null, 2)
             : format === "html"
-              ? reports.map(toHtml).join("\n")
+              ? shared.map(toHtml).join("\n")
               : JSON.stringify(payload, (_key, v) => (typeof v === "bigint" ? v.toString() : v), 2);
         if (out) {
           await writeFile(out, rendered);
