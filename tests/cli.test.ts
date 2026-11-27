@@ -215,5 +215,17 @@ describe("run", () => {
     expect(JSON.parse(evm.output).instructions.length).toBeGreaterThan(0);
     const lnk = await captureStdout(() => run(["lnk", file]));
     expect(lnk.code).toBe(3);
+    const risk = await captureStdout(() => run(["risk", file]));
+    expect(risk.code).toBe(0);
+    expect(JSON.parse(risk.output).score).toBeGreaterThanOrEqual(0);
+    const cluster = await captureStdout(() => run(["cluster", dir]));
+    expect(cluster.code).toBe(0);
+    expect(JSON.parse(cluster.output).clusters).toBeInstanceOf(Array);
+    const completion = await captureStdout(() => run(["completion", "bash"]));
+    expect(completion.code).toBe(0);
+    expect(completion.output).toContain("reverso");
+    const explain = await captureStdout(() => run(["explain", "imphash"]));
+    expect(explain.code).toBe(0);
+    expect(explain.output).toContain("imports");
   });
 });

@@ -79,6 +79,7 @@ For the in-browser analyzer, HTTP API and remote MCP service, see
 | **Cases** | `reverso case create/add/report` keeps evidence, hashes and notes in one JSON case file |
 | **Report exports** | SARIF for CI, CSV for spreadsheets and standalone HTML for sharing, in addition to JSON and Markdown |
 | **Document and bundle inspectors** | Static PDF structure, OOXML documents, PyInstaller CArchive, Windows shortcuts, .NET metadata streams and EVM bytecode, all parsed without executing content |
+| **Correlation and workflows** | Fingerprint clustering, explainable risk score, directory baselines, watch mode, incremental scan cache, shell completion and user config |
 | **Version and dependency inventory** | PE version info, delay imports and PDB path; ELF needed libraries, RPATH/RUNPATH and relocation counts; Mach-O dylibs and rpaths |
 | **Packer signals** | UPX signature and stub detection, plus multi-region high entropy heuristic |
 
@@ -321,7 +322,7 @@ node scripts/verify.mjs   # full pipeline (typecheck, coverage, build, audit)
 
 | Check | Requirement |
 | --- | --- |
-| Unit and integration tests | All pass (207 tests) |
+| Unit and integration tests | All pass (210 tests) |
 | Line coverage | At least 70% |
 | Branch coverage | At least 60% |
 | Type check | `tsc --noEmit`, zero errors |

@@ -37,10 +37,12 @@ import { parseLnk } from "./inspect/lnk.js";
 import { parseEvm } from "./inspect/evm.js";
 import { parseDotNet } from "./inspect/dotnet.js";
 import { parseOoxml } from "./node/ooxml.js";
+import { clusterScan, clusterToMarkdown } from "./inspect/cluster.js";
+import { loadConfig } from "./config.js";
 
 export { VERSION };
 
-const ANALYZERS = ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js", "scan", "diff", "find-bytes", "wasm", "dex", "pcap", "jwt", "match", "rules", "fuzzy", "baseline", "case", "pdf", "pyinstaller", "lnk", "evm", "dotnet", "ooxml", "hex"] as const;
+const ANALYZERS = ["analyze", "layout", "hardening", "strings", "entropy", "format", "archive", "js", "scan", "diff", "find-bytes", "wasm", "dex", "pcap", "jwt", "match", "rules", "fuzzy", "baseline", "case", "cluster", "risk", "pdf", "pyinstaller", "lnk", "evm", "dotnet", "ooxml", "hex"] as const;
 const COMMANDS = [...ANALYZERS, "site", "mcp", "doctor", "capabilities", "help", "version"] as const;
 
 const USAGE = `reverso ${VERSION}
@@ -63,6 +65,11 @@ Commands:
   fuzzy <file>        Fuzzy hash a file (--compare <file> for similarity)
   baseline <action>   create|verify a directory baseline (integrity check)
   case <action>       create|add|report an investigation case
+  cluster <dir>       Group files by shared fingerprints
+  risk <file>         Explainable 0-100 risk score for a file
+  completion <shell>  Generate shell completion (bash, zsh, powershell)
+  explain <field>     Explain a report field
+  watch <dir>         Watch a directory and report baseline changes
   pdf <file>          Static PDF structure and embedded content inventory
   pyinstaller <file>  PyInstaller CArchive cookie and table of contents
   lnk <file>          Windows shortcut target, arguments and timestamps
@@ -90,6 +97,7 @@ Options (analyze):
 
 Options (scan):
   --format <json|md|csv>  Output format (default: json)
+  --cache <file>      Cache file hashes and reuse unchanged results
 
 Options (baseline):
   --out <file>        Where to write a new baseline
@@ -99,6 +107,9 @@ Options (baseline):
 Options (case):
   --out <file>        Where to write a new case
   --notes <text>      Notes attached to the added evidence
+
+Options (watch):
+  --interval <seconds>  Poll interval (default: 5)
 
 Options (strings):
   --min-length <n>    Minimum string length (default: 4)
@@ -205,6 +216,7 @@ async function readCapped(file: string): Promise<Uint8Array> {
 
 export async function run(argv: string[]): Promise<number> {
   const { positional, flags } = parseArgs(argv);
+  const config = await loadConfig();
   const command = positional[0];
 
   try {
@@ -277,7 +289,7 @@ export async function run(argv: string[]): Promise<number> {
       case "strings": {
         const file = positional[1];
         if (!file) throw new UsageError("strings requires a file");
-        const minLength = flagNumber(flags, "min-length", 4, 2, 64);
+        const minLength = flagNumber(flags, "min-length", config.strings?.minLength ?? 4, 2, 64);
         const buf = await readCapped(file);
         const strings = extractStrings(buf, { minLength });
         printJson({ total: strings.length, categories: summarizeCategories(strings), strings });
@@ -316,7 +328,11 @@ export async function run(argv: string[]): Promise<number> {
       case "scan": {
         const target = positional[1];
         if (!target) throw new UsageError("scan requires a directory");
-        const report = await scanDirectory(target, flagNumber(flags, "max-files", 200, 1, 1000));
+        const report = await scanDirectory(
+          target,
+          flagNumber(flags, "max-files", config.scan?.maxFiles ?? 200, 1, 1000),
+          flagString(flags, "cache"),
+        );
         const format = flagString(flags, "format", "json");
         const rendered = format === "md" || format === "markdown"
           ? scanReportToMarkdown(report)
@@ -411,7 +427,7 @@ export async function run(argv: string[]): Promise<number> {
         if (action === "create") {
           const out = flagString(flags, "out");
           if (!out) throw new UsageError("baseline create requires --out <file>");
-          const scan = await scanDirectory(target, flagNumber(flags, "max-files", 200, 1, 1000));
+          const scan = await scanDirectory(target, flagNumber(flags, "max-files", config.scan?.maxFiles ?? 200, 1, 1000));
           const baseline = createBaseline(target, scan.entries);
           await writeFile(out, JSON.stringify(baseline, null, 2));
           process.stdout.write(`Baseline written to ${out} (${scan.entries.length} files)\n`);
@@ -421,7 +437,7 @@ export async function run(argv: string[]): Promise<number> {
           const baselinePath = flagString(flags, "baseline");
           if (!baselinePath) throw new UsageError("baseline verify requires --baseline <file>");
           const baseline = JSON.parse(await readFile(baselinePath, "utf8")) as Parameters<typeof verifyBaseline>[0];
-          const scan = await scanDirectory(target, flagNumber(flags, "max-files", 200, 1, 1000));
+          const scan = await scanDirectory(target, flagNumber(flags, "max-files", config.scan?.maxFiles ?? 200, 1, 1000));
           const diff = verifyBaseline(baseline, scan.entries);
           const format = flagString(flags, "format", "json");
           const rendered = format === "md" || format === "markdown" ? baselineDiffToMarkdown(diff) : JSON.stringify(diff, null, 2);
@@ -459,6 +475,87 @@ export async function run(argv: string[]): Promise<number> {
           return 0;
         }
         throw new UsageError("usage: reverso case create|add|report ...");
+      }
+
+      case "cluster": {
+        const target = positional[1];
+        if (!target) throw new UsageError("cluster requires a directory");
+        const scan = await scanDirectory(target, flagNumber(flags, "max-files", config.scan?.maxFiles ?? 200, 1, 1000));
+        const clusters = clusterScan(scan);
+        const format = flagString(flags, "format", config.format ?? "json");
+        const rendered = format === "md" || format === "markdown" ? clusterToMarkdown(clusters) : JSON.stringify({ root: target, clusters }, null, 2);
+        process.stdout.write(rendered + "\n");
+        return 0;
+      }
+
+      case "risk": {
+        const file = positional[1];
+        if (!file) throw new UsageError("risk requires a file");
+        const { analyzeBuffer } = await import("./core/analyze-buffer.js");
+        const { readFile: readFileAsync } = await import("node:fs/promises");
+        const report = analyzeBuffer(await readFileAsync(file), file);
+        printJson({ file, ...report.risk });
+        return 0;
+      }
+
+      case "completion": {
+        const shell = positional[1];
+        if (!shell) throw new UsageError("completion requires bash, zsh or powershell");
+        const names = COMMANDS.join(" ");
+        if (shell === "bash") {
+          process.stdout.write(`_reverso() { COMPREPLY=( $(compgen -W "${names}" -- "\${COMP_WORDS[COMP_CWORD]}") ); }\ncomplete -F _reverso reverso\n`);
+        } else if (shell === "zsh") {
+          process.stdout.write(`#compdef reverso\n_arguments '1:command:(${names})'\n`);
+        } else if (shell === "powershell") {
+          process.stdout.write(`Register-ArgumentCompleter -Native -CommandName reverso -ScriptBlock { param($wordToComplete) @(${COMMANDS.map((name) => `'${name}'`).join(", ")}) | Where-Object { $_ -like "$wordToComplete*" } }\n`);
+        } else {
+          throw new UsageError("unsupported shell: use bash, zsh or powershell");
+        }
+        return 0;
+      }
+
+      case "explain": {
+        const field = positional[1];
+        if (!field) throw new UsageError("explain requires a field name");
+        const explanations: Record<string, string> = {
+          sha256: "Full-file SHA-256 fingerprint used for exact identity and baselines.",
+          entropy: "Shannon entropy in bits per byte. Values above 7.5 suggest packed or encrypted content.",
+          imphash: "MD5 of lowercased dll.function imports in order. Groups related Windows builds.",
+          richHash: "Fingerprint of decoded Rich header compiler entries. Groups builds by toolchain.",
+          buildId: "GNU build-id from ELF notes. Stable per Linux build.",
+          uuid: "Mach-O LC_UUID, a per-build identifier.",
+          pdbPath: "Debug PDB path from the PE CodeView entry, often revealing build directories.",
+          needed: "Shared libraries required by an ELF binary (DT_NEEDED).",
+          hardening: "Binary protection checks such as PIE, NX, canary, RELRO, ASLR and CFG.",
+          risk: "Explainable 0 to 100 score derived from hardening, packer, entropy and secret findings.",
+          schemaVersion: "Version marker for the report JSON shape. Consumers can ignore unknown fields.",
+        };
+        process.stdout.write(explanations[field] ?? `No explanation available for ${field}. See README.md and docs/online.md.\n`);
+        return 0;
+      }
+
+      case "watch": {
+        const target = positional[1];
+        if (!target) throw new UsageError("watch requires a directory");
+        const interval = Math.max(1, flagNumber(flags, "interval", 5, 1, 3600)) * 1000;
+        const initial = await scanDirectory(target, config.scan?.maxFiles ?? 200);
+        let baseline = createBaseline(target, initial.entries);
+        process.stdout.write(`Watching ${target} every ${interval / 1000}s. Press Ctrl+C to stop.\n`);
+        const timer = setInterval(() => {
+          void scanDirectory(target, config.scan?.maxFiles ?? 200)
+            .then((scan) => {
+              const diff = verifyBaseline(baseline, scan.entries);
+              if (diff.added.length + diff.removed.length + diff.changed.length > 0) {
+                process.stdout.write(JSON.stringify({ time: new Date().toISOString(), ...diff }) + "\n");
+                baseline = createBaseline(target, scan.entries);
+              }
+            })
+            .catch((error) => process.stderr.write(`Watch error: ${(error as Error).message}\n`));
+        }, interval);
+        await new Promise<void>((resolvePromise) => {
+          process.once("SIGINT", () => { clearInterval(timer); resolvePromise(); });
+        });
+        return 0;
       }
 
       case "pdf": {

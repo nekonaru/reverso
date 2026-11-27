@@ -1,5 +1,23 @@
 # Changelog
 
+## v2.2.0
+
+Correlation, scoring and workflow efficiency for larger investigations.
+
+### New features
+
+- **Fingerprint clustering.** `reverso cluster <dir>` groups files by exact hash, imphash, Rich hash, ELF build-id, PDB path, Mach-O UUID and fuzzy hash prefix.
+- **Explainable risk score.** Every analysis report now carries a 0 to 100 `risk` score with reasons derived from hardening failures, packer signals, secrets, entropy and obfuscation. `reverso risk <file>` prints it directly.
+- **Incremental scan cache.** `reverso scan <dir> --cache <file>` reuses results for unchanged files based on size and modification time.
+- **Watch mode.** `reverso watch <dir> --interval 5` reports added, removed and changed files against a baseline until interrupted.
+- **Shell completion.** `reverso completion bash|zsh|powershell` generates a completion script.
+- **User config.** Defaults can be set in `~/.reverso/config.json` for scan limits, string length, rule pack and output format.
+- **`reverso explain <field>`** prints a short explanation of common report fields.
+
+### Improvements
+
+- Scan entries now include build fingerprints (imphash, Rich hash, build-id, PDB path, UUID and fuzzy hash) so clustering needs no second pass.
+
 ## v2.1.0
 
 Six new native format inspectors, plus richer PCAP and WebAssembly details.

@@ -79,6 +79,7 @@ analyzer di browser, HTTP API dan MCP jarak jauh, lihat
 | **Kasus** | `reverso case create/add/report` menyimpan evidence, hash dan catatan dalam satu file kasus JSON |
 | **Ekspor laporan** | SARIF untuk CI, CSV untuk spreadsheet dan HTML mandiri untuk dibagikan, selain JSON dan Markdown |
 | **Inspektor dokumen dan bundle** | Struktur PDF statis, dokumen OOXML, CArchive PyInstaller, shortcut Windows, metadata .NET dan bytecode EVM, semuanya diurai tanpa mengeksekusi isi |
+| **Korelasi dan alur kerja** | Clustering fingerprint, skor risiko yang bisa dijelaskan, baseline direktori, watch mode, cache scan inkremental, shell completion dan konfigurasi pengguna |
 | **Inventaris versi dan dependensi** | Version info, delay import dan path PDB pada PE; library yang dibutuhkan, RPATH/RUNPATH dan jumlahan relokasi pada ELF; dylib dan rpath pada Mach-O |
 | **Sinyal packer** | Deteksi tanda tangan dan stub UPX, plus heuristik region entropy tinggi |
 
@@ -320,7 +321,7 @@ node scripts/verify.mjs   # pipeline penuh (typecheck, coverage, build, audit)
 
 | Cek | Syarat |
 | --- | --- |
-| Unit dan integration test | Semua pass (207 test) |
+| Unit dan integration test | Semua pass (210 test) |
 | Line coverage | Minimal 70% |
 | Branch coverage | Minimal 60% |
 | Type check | `tsc --noEmit`, nol error |
