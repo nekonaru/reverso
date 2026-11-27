@@ -9,6 +9,7 @@ import { parseMachO, type MachOInfo } from "../binary/macho.js";
 import { hardeningReport, type HardeningReport } from "../binary/hardening.js";
 import { listArchive, type ArchiveListing } from "../archive/zip.js";
 import { analyzeJavaScript, type JsAnalysis } from "../js/jsanal.js";
+import { assessRisk, type RiskAssessment } from "../inspect/risk.js";
 
 export const MAX_INPUT_BYTES = 256 * 1024 * 1024;
 
@@ -30,6 +31,7 @@ export interface AnalysisReport {
   archive: ArchiveListing | null;
   javascript: JsAnalysis | null;
   packerSignals: string[];
+  risk: RiskAssessment;
 }
 
 const utf8Decoder = new TextDecoder("utf8");
@@ -74,7 +76,7 @@ export function analyzeBuffer(buf: Uint8Array, label: string): AnalysisReport {
   const strings = analyzeStrings(buf);
   const packerSignals = detectPackers(buf, format.format, strings.all, highEntropyRegions.length);
 
-  return {
+  const report: AnalysisReport = {
     schemaVersion: "2.0",
     file: label,
     sizeBytes: buf.length,
@@ -89,7 +91,9 @@ export function analyzeBuffer(buf: Uint8Array, label: string): AnalysisReport {
     archive,
     javascript,
     packerSignals,
+    risk: { score: 0, reasons: [] },
   };
+  return { ...report, risk: assessRisk(report) };
 }
 
 function analyzeStrings(buf: Uint8Array): { all: ExtractedString[] } {

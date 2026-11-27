@@ -1,5 +1,23 @@
 # Changelog
 
+## v2.2.0
+
+Korelasi, penilaian dan efisiensi alur kerja untuk investigasi skala besar.
+
+### Fitur baru
+
+- **Clustering fingerprint.** `reverso cluster <dir>` mengelompokkan file berdasarkan hash eksak, imphash, Rich hash, ELF build-id, path PDB, UUID Mach-O dan prefiks fuzzy hash.
+- **Skor risiko yang bisa dijelaskan.** Setiap laporan analisis kini membawa skor `risk` 0 sampai 100 berserta alasan dari hardening gagal, sinyal packer, secret, entropy dan obfuscation. `reverso risk <file>` menampilkannya langsung.
+- **Cache scan inkremental.** `reverso scan <dir> --cache <file>` memakai ulang hasil file yang tidak berubah berdasarkan ukuran dan waktu modifikasi.
+- **Watch mode.** `reverso watch <dir> --interval 5` melaporkan file baru, hilang dan berubah terhadap baseline sampai dihentikan.
+- **Shell completion.** `reverso completion bash|zsh|powershell` menghasilkan skrip completion.
+- **Konfigurasi pengguna.** Default bisa diatur di `~/.reverso/config.json` untuk batas scan, panjang string, rule pack dan format output.
+- **`reverso explain <field>`** menampilkan penjelasan singkat field laporan yang umum.
+
+### Peningkatan
+
+- Entri scan kini menyimpan fingerprint build (imphash, Rich hash, build-id, path PDB, UUID dan fuzzy hash) sehingga clustering tidak perlu passing kedua.
+
 ## v2.1.0
 
 Enam inspektor format native baru, plus detail PCAP dan WebAssembly yang lebih kaya.
