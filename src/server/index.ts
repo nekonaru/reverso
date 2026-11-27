@@ -9,6 +9,7 @@ import { VERSION } from "../version.js";
 import { runBrowserTool, type BrowserTool } from "../browser/index.js";
 import { handleMessage, type JsonRpcMessage } from "../mcp/server.js";
 import { DEFAULT_RULES } from "../rules/defaults.js";
+import { redactReport } from "../inspect/redact.js";
 
 const MAX_BODY_BYTES = Number(process.env["REVERSO_MAX_BODY_BYTES"] ?? 8 * 1024 * 1024);
 const API_KEY = process.env["REVERSO_API_KEY"] ?? "";
@@ -133,13 +134,30 @@ function requestTool(url: URL, body: Buffer): unknown {
   if (!VALID_TOOLS.has(tool)) {
     throw new Error(`Unknown or missing tool. Choose one of: ${[...VALID_TOOLS].join(", ")}`);
   }
-  return runBrowserTool({
+  const result = runBrowserTool({
     tool,
     bytes: new Uint8Array(body),
     label: url.searchParams.get("label") ?? "upload.bin",
     arg: url.searchParams.get("arg") ?? undefined,
   });
+  if (url.searchParams.get("redact") === "1" && typeof result === "object" && result !== null && "schemaVersion" in result) {
+    return redactReport(result as Parameters<typeof redactReport>[0]);
+  }
+  return result;
 }
+
+const OPENAPI = {
+  openapi: "3.0.3",
+  info: { title: "Reverso Online API", version: VERSION },
+  paths: {
+    "/health": { get: { summary: "Service health" } },
+    "/api/analyze": { post: { summary: "Analyze an uploaded file", parameters: [{ name: "tool", in: "query", required: true }] } },
+    "/api/jobs": { post: { summary: "Create a pollable analysis job" } },
+    "/api/jobs/{id}": { get: { summary: "Read a job result" } },
+    "/api/rules": { get: { summary: "Built-in rule pack" } },
+    "/api/batch": { post: { summary: "Analyze up to 20 base64 inputs" } },
+  },
+};
 
 async function serveStatic(pathname: string, res: ServerResponse): Promise<void> {
   let relative: string;
@@ -207,6 +225,36 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
   if (req.method === "GET" && url.pathname === "/api/rules") {
     json(res, 200, { count: DEFAULT_RULES.length, rules: DEFAULT_RULES });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/openapi.json") {
+    json(res, 200, OPENAPI);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/batch") {
+    try {
+      const body = await readBody(req);
+      const parsed = JSON.parse(body.toString("utf8")) as { tool?: string; items?: Array<{ label?: string; content: string }> };
+      const tool = parsed.tool as BrowserTool;
+      if (!VALID_TOOLS.has(tool) || !Array.isArray(parsed.items) || parsed.items.length > 20) {
+        json(res, 400, { error: "Provide a valid tool and at most 20 items" });
+        return;
+      }
+      const results = parsed.items.map((item, index) => {
+        const bytes = Buffer.from(item.content, "base64");
+        if (bytes.length > MAX_BODY_BYTES) throw new Error(`Item ${index} exceeds the body cap`);
+        return {
+          label: item.label ?? `item-${index}`,
+          bytes: bytes.length,
+          result: runBrowserTool({ tool, bytes: new Uint8Array(bytes), label: item.label ?? `item-${index}` }),
+        };
+      });
+      json(res, 200, { tool, count: results.length, results });
+    } catch (error) {
+      json(res, 400, { error: (error as Error).message });
+    }
     return;
   }
 

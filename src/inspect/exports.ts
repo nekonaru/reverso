@@ -121,6 +121,7 @@ footer { color:var(--muted); font-size:.85rem; margin-top:3rem; border-top:1px s
   const entries = [
     ['Size', report.sizeBytes + ' bytes'],
     ['Entropy', report.entropy + ' bits/byte'],
+    ['Risk', report.risk.score + '/100'],
     ['Strings', String(report.strings.total)],
     ['Packer signals', String(report.packerSignals.length)],
   ];
@@ -151,6 +152,7 @@ footer { color:var(--muted); font-size:.85rem; margin-top:3rem; border-top:1px s
     }
     details.append(h, table);
   };
+  add('Risk reasons', report.risk.reasons.map(reason => [reason]));
   add('Hardening', (report.hardening ? report.hardening.checks : []).map(c => [c.name, c.status, c.detail]));
   add('String categories', report.strings.categories.map(c => [c.category, c.count]));
   add('Packer signals', report.packerSignals.map(s => [s]));

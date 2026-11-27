@@ -1,5 +1,23 @@
 # Changelog
 
+## v3.0.0
+
+Platform and sharing milestone: safer reports, machine-readable API docs and MCP resources.
+
+### New features
+
+- **Secret redaction.** `reverso analyze --redact` and `?redact=1` on the API mask JWTs, cloud keys, tokens and private key headers in shared reports.
+- **OpenAPI document.** `GET /api/openapi.json` describes the public endpoints.
+- **Batch API.** `POST /api/batch` analyzes up to 20 base64 inputs in one request.
+- **MCP resources.** `resources/list` and `resources/read` expose the rule pack, capabilities and version via `reverso://` URIs.
+- **SBOM.** `npm run sbom` generates a CycloneDX-style `sbom.json` from the committed lock file.
+- **Threat model.** `docs/threat-model.md` documents boundaries, implemented controls and residual risks.
+- **HTML report v3** shows the risk score and its reasons alongside the existing findings.
+
+### Open: needs account access
+
+- npm trusted publishing, a public container image and hosted deployment. All configuration is ready; the owner must connect an account.
+
 ## v2.2.0
 
 Correlation, scoring and workflow efficiency for larger investigations.

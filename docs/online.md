@@ -44,11 +44,13 @@ For `jwt`, send the token as the request body text.
 
 Limits: 8 MB request body by default (`REVERSO_MAX_BODY_BYTES`), 60 second
 request timeout, CORS enabled for all origins. This endpoint is stateless and
-parses files without executing them.
+parses files without executing them. Add `redact=1` to mask secret-looking
+values in the response.
 
 Other routes: `GET /health` for health checks, `GET /` for the static site,
-`GET /api/rules` for the built-in rule pack, and `POST /api/jobs` for a job id
-that can be polled at `GET /api/jobs/<id>`. All analysis responses carry
+`GET /api/rules` for the built-in rule pack, `GET /api/openapi.json` for the
+endpoint specification, and `POST /api/batch` for up to 20 base64 inputs in
+one request. All analysis responses carry
 `schemaVersion: "2.0"`. Older clients can ignore this additive field.
 
 ## Authentication and rate limits
@@ -79,6 +81,9 @@ takes a few seconds.
 `text/event-stream` message when the client asks for SSE. The `initialize`
 response carries a `Mcp-Session-Id` header; send it back on later requests.
 Sessions are kept for 30 minutes and unknown session ids are rejected.
+`resources/list` and `resources/read` expose the built-in rule pack,
+capabilities and version through `reverso://rules/default`,
+`reverso://capabilities` and `reverso://version`.
 
 Because a remote server cannot read the client's filesystem, every file tool
 also accepts inline base64 content. Example:

@@ -89,7 +89,7 @@ describe("MCP server", () => {
   });
 
   it("returns a JSON-RPC error for unknown methods", async () => {
-    const response = await rpc("resources/list");
+    const response = await rpc("does/not/exist");
     expect(response?.error?.code).toBe(-32601);
   });
 
@@ -125,6 +125,15 @@ describe("MCP server", () => {
     const result = response?.result as { content: Array<{ text: string }> };
     const payload = JSON.parse(result.content[0]!.text);
     expect(payload.filesScanned).toBeGreaterThanOrEqual(1);
+  });
+
+  it("lists and reads MCP resources", async () => {
+    const list = await rpc("resources/list");
+    const resources = (list?.result as { resources: Array<{ uri: string }> }).resources;
+    expect(resources.map((r) => r.uri)).toContain("reverso://rules/default");
+    const read = await rpc("resources/read", { uri: "reverso://rules/default" });
+    const contents = (read?.result as { contents: Array<{ text: string }> }).contents;
+    expect(JSON.parse(contents[0]!.text)).toBeInstanceOf(Array);
   });
 
   it("runs tools/call reverso_jwt on a token", async () => {
